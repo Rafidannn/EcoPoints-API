@@ -20,7 +20,6 @@ RUN apk --no-cache add ca-certificates tzdata
 WORKDIR /app
 
 COPY --from=builder /app/ecopoints-api .
-COPY --from=builder /app/.env.example .env
 
 EXPOSE 8090
 
