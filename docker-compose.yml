@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ecopoints-api
+    restart: always
+    ports:
+      - "8090:8090"
+    env_file:
+      - .env
+    environment:
+      - APP_ENV=production
