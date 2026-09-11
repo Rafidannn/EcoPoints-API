@@ -1,0 +1,1033 @@
+basePath: /
+definitions:
+  dto.APIErrorResponse:
+    properties:
+      errors: {}
+      message:
+        example: Validation error
+        type: string
+      success:
+        example: false
+        type: boolean
+    type: object
+  dto.APIResponse:
+    properties:
+      data: {}
+      message:
+        example: Operation successful
+        type: string
+      success:
+        example: true
+        type: boolean
+    type: object
+  dto.CreateDropPointRequest:
+    properties:
+      address:
+        example: Jl. Sukajadi No. 123, Bandung
+        type: string
+      is_active:
+        example: true
+        type: boolean
+      latitude:
+        example: -6.890123
+        type: number
+      longitude:
+        example: 107.610123
+        type: number
+      name:
+        example: Drop Point Sukajadi
+        maxLength: 255
+        minLength: 2
+        type: string
+    required:
+    - address
+    - name
+    type: object
+  dto.CreateRewardRequest:
+    properties:
+      description:
+        example: Voucher belanja dapat digunakan di minimarket rekanan
+        type: string
+      image:
+        example: rewards/voucher50k.png
+        type: string
+      is_active:
+        example: true
+        type: boolean
+      name:
+        example: Voucher Belanja Rp 50.000
+        maxLength: 255
+        minLength: 2
+        type: string
+      point_cost:
+        example: 500
+        type: integer
+      stock:
+        example: 20
+        minimum: 0
+        type: integer
+    required:
+    - name
+    - point_cost
+    - stock
+    type: object
+  dto.CreateWasteTypeRequest:
+    properties:
+      description:
+        example: Botol plastik bersih siap daur ulang
+        type: string
+      is_active:
+        example: true
+        type: boolean
+      name:
+        example: Plastik Botol Super
+        maxLength: 255
+        minLength: 2
+        type: string
+      points_per_kg:
+        example: 550
+        minimum: 0
+        type: integer
+      unit_price_per_kg:
+        example: 3500
+        minimum: 0
+        type: number
+    required:
+    - name
+    - points_per_kg
+    - unit_price_per_kg
+    type: object
+  dto.DropPointResponse:
+    properties:
+      address:
+        example: Jl. Sukajadi No. 123, Bandung
+        type: string
+      created_at:
+        type: string
+      id:
+        example: 1
+        type: integer
+      is_active:
+        example: true
+        type: boolean
+      latitude:
+        example: -6.890123
+        type: number
+      longitude:
+        example: 107.610123
+        type: number
+      name:
+        example: Drop Point Sukajadi
+        type: string
+      updated_at:
+        type: string
+    type: object
+  dto.LoginRequest:
+    properties:
+      email:
+        example: admin@ecopoints.test
+        type: string
+      password:
+        example: password
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  dto.LoginResponse:
+    properties:
+      expires_in:
+        example: 259200
+        type: integer
+      token:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+      token_type:
+        example: Bearer
+        type: string
+      user:
+        $ref: '#/definitions/dto.UserResponse'
+    type: object
+  dto.RegisterRequest:
+    properties:
+      email:
+        example: johndoe@example.com
+        maxLength: 255
+        type: string
+      name:
+        example: John Doe
+        maxLength: 255
+        minLength: 2
+        type: string
+      password:
+        example: secret123
+        minLength: 8
+        type: string
+    required:
+    - email
+    - name
+    - password
+    type: object
+  dto.RewardResponse:
+    properties:
+      created_at:
+        type: string
+      description:
+        example: Voucher belanja dapat digunakan di minimarket rekanan
+        type: string
+      id:
+        example: 1
+        type: integer
+      image:
+        example: rewards/voucher50k.png
+        type: string
+      is_active:
+        example: true
+        type: boolean
+      name:
+        example: Voucher Belanja Rp 50.000
+        type: string
+      point_cost:
+        example: 500
+        type: integer
+      stock:
+        example: 20
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  dto.UpdateDropPointRequest:
+    properties:
+      address:
+        example: Jl. Sukajadi No. 125, Bandung
+        type: string
+      is_active:
+        example: true
+        type: boolean
+      latitude:
+        example: -6.890123
+        type: number
+      longitude:
+        example: 107.610123
+        type: number
+      name:
+        example: Drop Point Sukajadi Pusat
+        type: string
+    type: object
+  dto.UpdateRewardRequest:
+    properties:
+      description:
+        example: Voucher belanja berlaku nasional
+        type: string
+      image:
+        example: rewards/voucher50k_new.png
+        type: string
+      is_active:
+        example: true
+        type: boolean
+      name:
+        example: Voucher Belanja Rp 50.000 Promo
+        type: string
+      point_cost:
+        example: 450
+        type: integer
+      stock:
+        example: 25
+        type: integer
+    type: object
+  dto.UpdateWasteTypeRequest:
+    properties:
+      description:
+        example: Botol plastik bersih disortir
+        type: string
+      is_active:
+        example: true
+        type: boolean
+      name:
+        example: Plastik Botol Super Edit
+        type: string
+      points_per_kg:
+        example: 600
+        type: integer
+      unit_price_per_kg:
+        example: 3800
+        type: number
+    type: object
+  dto.UserResponse:
+    properties:
+      created_at:
+        type: string
+      email:
+        example: johndoe@example.com
+        type: string
+      id:
+        example: 1
+        type: integer
+      name:
+        example: John Doe
+        type: string
+      points_balance:
+        example: 1500
+        type: integer
+      role:
+        example: user
+        type: string
+      updated_at:
+        type: string
+    type: object
+  dto.WasteTypeResponse:
+    properties:
+      created_at:
+        type: string
+      description:
+        example: Botol PET bersih
+        type: string
+      id:
+        example: 1
+        type: integer
+      is_active:
+        example: true
+        type: boolean
+      name:
+        example: Plastik (Botol / Ember / Kresek)
+        type: string
+      points_per_kg:
+        example: 500
+        type: integer
+      unit_price_per_kg:
+        example: 3000
+        type: number
+      updated_at:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@ecopoints.test
+    name: EcoPoints Dev Team
+  description: REST API for EcoPoints application built with Go Gin and connected
+    to existing Laravel MySQL database.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: http://swagger.io/terms/
+  title: EcoPoints Golang REST API
+  version: "1.0"
+paths:
+  /api/v1/auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate user via email and Laravel bcrypt password, returns
+        JWT token
+      parameters:
+      - description: Login Credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Login successful
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.LoginResponse'
+              type: object
+        "400":
+          description: Validation error
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "401":
+          description: Invalid credentials
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+      summary: Login user
+      tags:
+      - Auth
+  /api/v1/auth/me:
+    get:
+      description: Retrieve profile of the currently authenticated user
+      parameters:
+      - description: 'Bearer token (Format: Bearer <token>)'
+        in: header
+        name: Authorization
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User profile retrieved
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.UserResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get current user profile
+      tags:
+      - Auth
+  /api/v1/auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Register a new user with default 'user' role
+      parameters:
+      - description: User Registration Data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: User successfully registered
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.UserResponse'
+              type: object
+        "400":
+          description: Validation error
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "409":
+          description: Email already exists
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+      summary: Register new user
+      tags:
+      - Auth
+  /api/v1/drop-points:
+    get:
+      description: Retrieve list of all drop point locations
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Drop points retrieved successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.APIResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/dto.DropPointResponse'
+                  type: array
+              type: object
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+      summary: Get all drop points
+      tags:
+      - Drop Points
+    post:
+      consumes:
+      - application/json
+      description: Add a new drop point location (Admin only)
+      parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        type: string
+      - description: Drop Point Data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateDropPointRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Drop point created
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.DropPointResponse'
+              type: object
+        "400":
+          description: Validation error
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new drop point
+      tags:
+      - Drop Points
+  /api/v1/drop-points/{id}:
+    delete:
+      description: Delete drop point by ID (Admin only)
+      parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        type: string
+      - description: Drop Point ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Drop point deleted
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+        "400":
+          description: Invalid ID
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "404":
+          description: Drop point not found
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a drop point
+      tags:
+      - Drop Points
+    get:
+      description: Retrieve details of a specific drop point location
+      parameters:
+      - description: Drop Point ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Drop point retrieved
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.DropPointResponse'
+              type: object
+        "400":
+          description: Invalid ID
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "404":
+          description: Drop point not found
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+      summary: Get drop point by ID
+      tags:
+      - Drop Points
+    put:
+      consumes:
+      - application/json
+      description: Update drop point details by ID (Admin only)
+      parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        type: string
+      - description: Drop Point ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Updated Drop Point Data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateDropPointRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Drop point updated
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.DropPointResponse'
+              type: object
+        "400":
+          description: Invalid input
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "404":
+          description: Drop point not found
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update an existing drop point
+      tags:
+      - Drop Points
+  /api/v1/rewards:
+    get:
+      description: Retrieve list of all redeemable rewards
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Rewards retrieved successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.APIResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/dto.RewardResponse'
+                  type: array
+              type: object
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+      summary: Get all rewards
+      tags:
+      - Rewards
+    post:
+      consumes:
+      - application/json
+      description: Add a new reward to catalogue (Admin only)
+      parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        type: string
+      - description: Reward Data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateRewardRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Reward created
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.RewardResponse'
+              type: object
+        "400":
+          description: Validation error
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new reward
+      tags:
+      - Rewards
+  /api/v1/rewards/{id}:
+    delete:
+      description: Delete reward by ID (Admin only)
+      parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        type: string
+      - description: Reward ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Reward deleted
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+        "400":
+          description: Invalid ID
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "404":
+          description: Reward not found
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a reward
+      tags:
+      - Rewards
+    get:
+      description: Retrieve details of a specific reward by its ID
+      parameters:
+      - description: Reward ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Reward retrieved
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.RewardResponse'
+              type: object
+        "400":
+          description: Invalid ID
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "404":
+          description: Reward not found
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+      summary: Get reward by ID
+      tags:
+      - Rewards
+    put:
+      consumes:
+      - application/json
+      description: Update reward by ID (Admin only)
+      parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        type: string
+      - description: Reward ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Updated Reward Data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateRewardRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Reward updated
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.RewardResponse'
+              type: object
+        "400":
+          description: Invalid input
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "404":
+          description: Reward not found
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update an existing reward
+      tags:
+      - Rewards
+  /api/v1/waste-types:
+    get:
+      description: Retrieve list of all waste types from database
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Waste types retrieved successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.APIResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/dto.WasteTypeResponse'
+                  type: array
+              type: object
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+      summary: Get all waste types
+      tags:
+      - Waste Types
+    post:
+      consumes:
+      - application/json
+      description: Create a new waste type (Admin only)
+      parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        type: string
+      - description: Waste Type Data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateWasteTypeRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Waste type created
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.WasteTypeResponse'
+              type: object
+        "400":
+          description: Validation error
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new waste type
+      tags:
+      - Waste Types
+  /api/v1/waste-types/{id}:
+    delete:
+      description: Delete waste type by ID (Admin only)
+      parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        type: string
+      - description: Waste Type ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Waste type deleted
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+        "400":
+          description: Invalid ID
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "404":
+          description: Waste type not found
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a waste type
+      tags:
+      - Waste Types
+    get:
+      description: Retrieve details of a specific waste type by its ID
+      parameters:
+      - description: Waste Type ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Waste type retrieved
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.WasteTypeResponse'
+              type: object
+        "400":
+          description: Invalid ID
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "404":
+          description: Waste type not found
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+      summary: Get waste type by ID
+      tags:
+      - Waste Types
+    put:
+      consumes:
+      - application/json
+      description: Update waste type by ID (Admin only)
+      parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        type: string
+      - description: Waste Type ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Updated Waste Type Data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateWasteTypeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Waste type updated
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.WasteTypeResponse'
+              type: object
+        "400":
+          description: Invalid input
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "404":
+          description: Waste type not found
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update an existing waste type
+      tags:
+      - Waste Types
+schemes:
+- http
+- https
+securityDefinitions:
+  BearerAuth:
+    description: 'Type "Bearer " followed by your JWT token. Example: "Bearer eyJhbGciOi..."'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

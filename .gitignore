@@ -1,0 +1,25 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+ecopoints-api
+main
+bin/
+
+# Environment files
+.env
+!.env.example
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# IDE and OS files
+.DS_Store
+.idea/
+.vscode/
+*.swp
