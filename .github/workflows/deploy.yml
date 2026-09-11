@@ -19,6 +19,7 @@ jobs:
           script_stop: true
           script: |
             cd ~/api/ecopoints-go-api
-            git pull origin main
+            git fetch origin
+            git reset --hard origin/main
             docker compose up -d --build
 
