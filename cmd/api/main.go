@@ -94,6 +94,11 @@ func main() {
 		c.Next()
 	})
 
+	// Root route: auto-redirect to Swagger documentation
+	router.GET("/", func(c *gin.Context) {
+		c.Redirect(http.StatusMovedPermanently, "/swagger/index.html")
+	})
+
 	// Health check endpoint
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, dto.SuccessResponse("EcoPoints Go API is healthy and connected to database", gin.H{
