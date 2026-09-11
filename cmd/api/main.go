@@ -77,6 +77,7 @@ func main() {
 
 	// 7. Initialize Gin Router
 	router := gin.Default()
+	_ = router.SetTrustedProxies(nil)
 
 	// CORS Middleware
 	router.Use(func(c *gin.Context) {
