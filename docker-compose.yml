@@ -6,7 +6,7 @@ services:
     container_name: ecopoints-api
     restart: always
     ports:
-      - "8090:8090"
+      - "${APP_PORT:-8090}:${APP_PORT:-8090}"
     env_file:
       - .env
     environment:
