@@ -21,6 +21,6 @@ WORKDIR /app
 
 COPY --from=builder /app/ecopoints-api .
 
-EXPOSE 8090
+EXPOSE 8092
 
 CMD ["./ecopoints-api"]
