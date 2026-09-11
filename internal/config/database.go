@@ -38,10 +38,10 @@ func InitDB(cfg *Config) (*gorm.DB, error) {
 		return nil, fmt.Errorf("failed to get generic database object: %w", err)
 	}
 
-	// Set connection pool parameters
-	sqlDB.SetMaxIdleConns(10)
-	sqlDB.SetMaxOpenConns(100)
-	sqlDB.SetConnMaxLifetime(time.Hour)
+	// Set connection pool parameters - kept low for shared hosting limits
+	sqlDB.SetMaxIdleConns(2)
+	sqlDB.SetMaxOpenConns(5)
+	sqlDB.SetConnMaxLifetime(30 * time.Minute)
 
 	log.Println("Database connection to Laravel MySQL database successfully established!")
 	return db, nil
