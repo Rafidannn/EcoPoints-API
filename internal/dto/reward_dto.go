@@ -20,6 +20,21 @@ type UpdateRewardRequest struct {
 	IsActive    *bool   `json:"is_active,omitempty" example:"true"`
 }
 
+type RedeemRewardRequest struct {
+	Notes *string `json:"notes,omitempty" example:"Harap kirim ke nomor GoPay 081234567890"`
+}
+
+type RedemptionResponse struct {
+	ID         uint64     `json:"id"`
+	UserID     uint64     `json:"user_id"`
+	RewardID   uint64     `json:"reward_id"`
+	RewardName string     `json:"reward_name"`
+	PointsUsed uint       `json:"points_used"`
+	Status     string     `json:"status"`
+	Notes      *string    `json:"notes,omitempty"`
+	CreatedAt  *time.Time `json:"created_at"`
+}
+
 type RewardResponse struct {
 	ID          uint64     `json:"id" example:"1"`
 	Name        string     `json:"name" example:"Voucher Belanja Rp 50.000"`

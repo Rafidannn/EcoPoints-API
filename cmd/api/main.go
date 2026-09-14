@@ -167,6 +167,14 @@ func main() {
 			rewardsGroup.GET("", rewardHandler.GetAll)
 			rewardsGroup.GET("/:id", rewardHandler.GetByID)
 
+			// Authenticated user routes (redeem & my-redemptions)
+			authRewards := rewardsGroup.Group("")
+			authRewards.Use(middleware.AuthMiddleware(jwtService))
+			{
+				authRewards.POST("/:id/redeem", rewardHandler.Redeem)
+				authRewards.GET("/my-redemptions", rewardHandler.GetMyRedemptions)
+			}
+
 			// Admin only write routes
 			adminRewards := rewardsGroup.Group("")
 			adminRewards.Use(middleware.AuthMiddleware(jwtService), middleware.RoleMiddleware("admin"))

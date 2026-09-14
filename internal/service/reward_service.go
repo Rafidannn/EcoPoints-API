@@ -10,7 +10,9 @@ import (
 )
 
 var (
-	ErrRewardNotFound = errors.New("reward not found")
+	ErrRewardNotFound    = errors.New("reward not found")
+	ErrInsufficientPoints = errors.New("saldo poin tidak mencukupi")
+	ErrOutOfStock        = errors.New("stok hadiah habis")
 )
 
 type RewardService interface {
@@ -19,6 +21,8 @@ type RewardService interface {
 	CreateReward(req *dto.CreateRewardRequest) (*dto.RewardResponse, error)
 	UpdateReward(id uint64, req *dto.UpdateRewardRequest) (*dto.RewardResponse, error)
 	DeleteReward(id uint64) error
+	RedeemReward(userID uint64, rewardID uint64, notes *string) (*dto.RedemptionResponse, error)
+	GetMyRedemptions(userID uint64) ([]dto.RedemptionResponse, error)
 }
 
 type rewardService struct {
@@ -147,4 +151,61 @@ func toRewardResponse(rew *model.Reward) dto.RewardResponse {
 		CreatedAt:   rew.CreatedAt,
 		UpdatedAt:   rew.UpdatedAt,
 	}
+}
+
+func (s *rewardService) RedeemReward(userID uint64, rewardID uint64, notes *string) (*dto.RedemptionResponse, error) {
+	reward, err := s.rewardRepo.FindByID(rewardID)
+	if err != nil {
+		return nil, err
+	}
+	if reward == nil {
+		return nil, ErrRewardNotFound
+	}
+	if !reward.IsActive {
+		return nil, ErrOutOfStock
+	}
+
+	redemption, err := s.rewardRepo.Redeem(userID, reward, notes)
+	if err != nil {
+		return nil, err
+	}
+
+	rewardName := reward.Name
+	res := &dto.RedemptionResponse{
+		ID:         redemption.ID,
+		UserID:     redemption.UserID,
+		RewardID:   redemption.RewardID,
+		RewardName: rewardName,
+		PointsUsed: redemption.PointsUsed,
+		Status:     redemption.Status,
+		Notes:      redemption.Notes,
+		CreatedAt:  redemption.CreatedAt,
+	}
+	return res, nil
+}
+
+func (s *rewardService) GetMyRedemptions(userID uint64) ([]dto.RedemptionResponse, error) {
+	redemptions, err := s.rewardRepo.GetMyRedemptions(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]dto.RedemptionResponse, len(redemptions))
+	for i, r := range redemptions {
+		rewardName := ""
+		if r.Reward != nil {
+			rewardName = r.Reward.Name
+		}
+		result[i] = dto.RedemptionResponse{
+			ID:         r.ID,
+			UserID:     r.UserID,
+			RewardID:   r.RewardID,
+			RewardName: rewardName,
+			PointsUsed: r.PointsUsed,
+			Status:     r.Status,
+			Notes:      r.Notes,
+			CreatedAt:  r.CreatedAt,
+		}
+	}
+	return result, nil
 }

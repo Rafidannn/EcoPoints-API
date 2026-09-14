@@ -231,3 +231,99 @@ func (h *RewardHandler) Delete(c *gin.Context) {
 		nil,
 	))
 }
+
+// Redeem godoc
+// @Summary Redeem a reward
+// @Description User redeems a reward using their points
+// @Tags Rewards
+// @Security BearerAuth
+// @Param Authorization header string true "Bearer token"
+// @Param id path int true "Reward ID"
+// @Param request body dto.RedeemRewardRequest false "Optional notes"
+// @Produce json
+// @Success 200 {object} dto.APIResponse{data=dto.RedemptionResponse} "Redeemed successfully"
+// @Failure 400 {object} dto.APIErrorResponse "Invalid ID or insufficient points"
+// @Failure 401 {object} dto.APIErrorResponse "Unauthorized"
+// @Failure 404 {object} dto.APIErrorResponse "Reward not found"
+// @Router /api/v1/rewards/{id}/redeem [post]
+func (h *RewardHandler) Redeem(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Unauthorized", nil))
+		return
+	}
+
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse("Invalid ID format", gin.H{"id": "Must be a valid integer ID"}))
+		return
+	}
+
+	var req dto.RedeemRewardRequest
+	var uid uint64
+	switch v := userID.(type) {
+	case uint64:
+		uid = v
+	case float64:
+		uid = uint64(v)
+	case int:
+		uid = uint64(v)
+	default:
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse("Invalid user id type", nil))
+		return
+	}
+	redemption, err := h.rewardService.RedeemReward(uid, id, req.Notes)
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrRewardNotFound):
+			c.JSON(http.StatusNotFound, dto.ErrorResponse(err.Error(), nil))
+		case err.Error() == "saldo poin tidak mencukupi":
+			c.JSON(http.StatusBadRequest, dto.ErrorResponse(err.Error(), gin.H{"points": "Insufficient points balance"}))
+		case err.Error() == "stok hadiah habis":
+			c.JSON(http.StatusBadRequest, dto.ErrorResponse(err.Error(), gin.H{"stock": "Reward is out of stock"}))
+		default:
+			c.JSON(http.StatusInternalServerError, dto.ErrorResponse("Gagal menukar hadiah", gin.H{"error": err.Error()}))
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponse("Hadiah berhasil ditukar!", redemption))
+}
+
+// GetMyRedemptions godoc
+// @Summary Get my reward redemptions
+// @Description Get list of reward redemptions for the logged-in user
+// @Tags Rewards
+// @Security BearerAuth
+// @Param Authorization header string true "Bearer token"
+// @Produce json
+// @Success 200 {object} dto.APIResponse{data=[]dto.RedemptionResponse}
+// @Failure 401 {object} dto.APIErrorResponse
+// @Router /api/v1/rewards/my-redemptions [get]
+func (h *RewardHandler) GetMyRedemptions(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Unauthorized", nil))
+		return
+	}
+
+	var uid uint64
+	switch v := userID.(type) {
+	case uint64:
+		uid = v
+	case float64:
+		uid = uint64(v)
+	case int:
+		uid = uint64(v)
+	default:
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse("Invalid user id type", nil))
+		return
+	}
+	redemptions, err := h.rewardService.GetMyRedemptions(uid)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse("Gagal mengambil data penukaran", gin.H{"error": err.Error()}))
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponse("Redemptions retrieved", redemptions))
+}
