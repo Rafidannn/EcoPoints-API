@@ -63,6 +63,7 @@ func main() {
 	wasteTypeRepo := repository.NewWasteTypeRepository(db)
 	dropPointRepo := repository.NewDropPointRepository(db)
 	rewardRepo := repository.NewRewardRepository(db)
+	leaderboardRepo := repository.NewLeaderboardRepository(db)
 
 	// 5. Initialize Services
 	jwtService := service.NewJWTService(cfg.JWTSecret, cfg.JWTExpirationHours)
@@ -70,12 +71,14 @@ func main() {
 	wasteTypeService := service.NewWasteTypeService(wasteTypeRepo)
 	dropPointService := service.NewDropPointService(dropPointRepo)
 	rewardService := service.NewRewardService(rewardRepo)
+	leaderboardService := service.NewLeaderboardService(leaderboardRepo)
 
 	// 6. Initialize Handlers
 	authHandler := handler.NewAuthHandler(authService)
 	wasteTypeHandler := handler.NewWasteTypeHandler(wasteTypeService)
 	dropPointHandler := handler.NewDropPointHandler(dropPointService)
 	rewardHandler := handler.NewRewardHandler(rewardService)
+	leaderboardHandler := handler.NewLeaderboardHandler(leaderboardService)
 
 	// 7. Initialize Gin Router
 	router := gin.Default()
@@ -170,6 +173,9 @@ func main() {
 				adminRewards.DELETE("/:id", rewardHandler.Delete)
 			}
 		}
+
+		// 5. Leaderboard Route (public)
+		v1.GET("/leaderboard", leaderboardHandler.GetLeaderboard)
 	}
 
 	// 8. Start server
