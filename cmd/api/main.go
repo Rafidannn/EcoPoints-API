@@ -64,6 +64,7 @@ func main() {
 	dropPointRepo := repository.NewDropPointRepository(db)
 	rewardRepo := repository.NewRewardRepository(db)
 	leaderboardRepo := repository.NewLeaderboardRepository(db)
+	wasteDepositRepo := repository.NewWasteDepositRepository(db)
 
 	// 5. Initialize Services
 	jwtService := service.NewJWTService(cfg.JWTSecret, cfg.JWTExpirationHours)
@@ -72,6 +73,7 @@ func main() {
 	dropPointService := service.NewDropPointService(dropPointRepo)
 	rewardService := service.NewRewardService(rewardRepo)
 	leaderboardService := service.NewLeaderboardService(leaderboardRepo)
+	wasteDepositService := service.NewWasteDepositService(wasteDepositRepo, wasteTypeRepo)
 
 	// 6. Initialize Handlers
 	authHandler := handler.NewAuthHandler(authService)
@@ -79,6 +81,7 @@ func main() {
 	dropPointHandler := handler.NewDropPointHandler(dropPointService)
 	rewardHandler := handler.NewRewardHandler(rewardService)
 	leaderboardHandler := handler.NewLeaderboardHandler(leaderboardService)
+	wasteDepositHandler := handler.NewWasteDepositHandler(wasteDepositService)
 
 	// 7. Initialize Gin Router
 	router := gin.Default()
@@ -176,6 +179,16 @@ func main() {
 
 		// 5. Leaderboard Route (public)
 		v1.GET("/leaderboard", leaderboardHandler.GetLeaderboard)
+
+		// 6. Waste Deposits Routes
+		wasteDepositsGroup := v1.Group("/waste-deposits")
+		wasteDepositsGroup.Use(middleware.AuthMiddleware(jwtService))
+		{
+			wasteDepositsGroup.POST("", wasteDepositHandler.Create)
+			wasteDepositsGroup.GET("", wasteDepositHandler.GetAll)
+			wasteDepositsGroup.GET("/:id", wasteDepositHandler.GetByID)
+			wasteDepositsGroup.PUT("/:id/verify", middleware.RoleMiddleware("admin", "petugas"), wasteDepositHandler.Verify)
+		}
 	}
 
 	// 8. Start server
