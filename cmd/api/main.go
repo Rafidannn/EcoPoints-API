@@ -127,6 +127,7 @@ func main() {
 			authGroup.POST("/register", authHandler.Register)
 			authGroup.POST("/login", authHandler.Login)
 			authGroup.GET("/me", middleware.AuthMiddleware(jwtService), authHandler.Me)
+			authGroup.PUT("/change-password", middleware.AuthMiddleware(jwtService), authHandler.ChangePassword)
 		}
 
 		// 2. Waste Types Routes (CRUD)

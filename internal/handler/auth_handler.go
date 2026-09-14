@@ -165,6 +165,85 @@ func (h *AuthHandler) Me(c *gin.Context) {
 	))
 }
 
+// ChangePassword godoc
+// @Summary Change user password
+// @Description Change password for the currently authenticated user
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body dto.ChangePasswordRequest true "Change Password Request"
+// @Success 200 {object} dto.APIResponse "Password updated successfully"
+// @Failure 400 {object} dto.APIErrorResponse "Validation error"
+// @Failure 401 {object} dto.APIErrorResponse "Unauthorized or wrong current password"
+// @Failure 500 {object} dto.APIErrorResponse "Internal server error"
+// @Router /api/v1/auth/change-password [put]
+func (h *AuthHandler) ChangePassword(c *gin.Context) {
+	userIDVal, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse(
+			"Unauthorized",
+			gin.H{"auth": "User ID not found in token"},
+		))
+		return
+	}
+
+	var userID uint64
+	switch v := userIDVal.(type) {
+	case uint64:
+		userID = v
+	case float64:
+		userID = uint64(v)
+	case int:
+		userID = uint64(v)
+	default:
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(
+			"Internal server error",
+			gin.H{"auth": "Invalid user ID type"},
+		))
+		return
+	}
+
+	var req dto.ChangePasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse(
+			"Validation failed",
+			formatValidationError(err),
+		))
+		return
+	}
+
+	err := h.authService.ChangePassword(userID, &req)
+	if err != nil {
+		if errors.Is(err, service.ErrWrongCurrentPassword) {
+			c.JSON(http.StatusBadRequest, dto.ErrorResponse(
+				err.Error(),
+				gin.H{"current_password": "Kata sandi saat ini salah"},
+			))
+			return
+		}
+		if errors.Is(err, service.ErrUserNotFound) {
+			c.JSON(http.StatusNotFound, dto.ErrorResponse(
+				err.Error(),
+				gin.H{"user": "User record not found"},
+			))
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(
+			"Gagal mengubah kata sandi",
+			gin.H{"error": err.Error()},
+		))
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponse(
+		"Kata sandi berhasil diubah",
+		nil,
+	))
+}
+
+
 func formatValidationError(err error) gin.H {
 	errMap := gin.H{}
 	var validationErrors validator.ValidationErrors

@@ -12,15 +12,17 @@ import (
 )
 
 var (
-	ErrEmailAlreadyExists = errors.New("email is already registered")
-	ErrInvalidCredentials = errors.New("invalid email or password")
-	ErrUserNotFound       = errors.New("user not found")
+	ErrEmailAlreadyExists   = errors.New("email is already registered")
+	ErrInvalidCredentials   = errors.New("invalid email or password")
+	ErrUserNotFound         = errors.New("user not found")
+	ErrWrongCurrentPassword = errors.New("kata sandi saat ini salah")
 )
 
 type AuthService interface {
 	Register(req *dto.RegisterRequest) (*dto.UserResponse, error)
 	Login(req *dto.LoginRequest) (*dto.LoginResponse, error)
 	GetProfile(userID uint64) (*dto.UserResponse, error)
+	ChangePassword(userID uint64, req *dto.ChangePasswordRequest) error
 }
 
 type authService struct {
@@ -134,3 +136,27 @@ func (s *authService) GetProfile(userID uint64) (*dto.UserResponse, error) {
 		UpdatedAt:     user.UpdatedAt,
 	}, nil
 }
+
+func (s *authService) ChangePassword(userID uint64, req *dto.ChangePasswordRequest) error {
+	user, err := s.userRepo.FindByID(userID)
+	if err != nil {
+		return err
+	}
+	if user == nil {
+		return ErrUserNotFound
+	}
+
+	// Verify current password with bcrypt
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.CurrentPassword)); err != nil {
+		return ErrWrongCurrentPassword
+	}
+
+	// Hash new password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	return s.userRepo.UpdatePassword(userID, string(hashedPassword))
+}
+

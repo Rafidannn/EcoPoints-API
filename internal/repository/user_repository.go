@@ -13,6 +13,7 @@ type UserRepository interface {
 	FindByEmail(email string) (*model.User, error)
 	FindByID(id uint64) (*model.User, error)
 	IsEmailExists(email string) (bool, error)
+	UpdatePassword(id uint64, hashedPassword string) error
 }
 
 type userRepository struct {
@@ -59,3 +60,8 @@ func (r *userRepository) IsEmailExists(email string) (bool, error) {
 	}
 	return count > 0, nil
 }
+
+func (r *userRepository) UpdatePassword(id uint64, hashedPassword string) error {
+	return r.db.Model(&model.User{}).Where("id = ?", id).Update("password", hashedPassword).Error
+}
+

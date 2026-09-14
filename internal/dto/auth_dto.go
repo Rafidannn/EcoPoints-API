@@ -29,3 +29,9 @@ type LoginResponse struct {
 	ExpiresIn int64        `json:"expires_in" example:"259200"`
 	User      UserResponse `json:"user"`
 }
+
+type ChangePasswordRequest struct {
+	CurrentPassword string `json:"current_password" binding:"required" example:"secret123"`
+	NewPassword     string `json:"new_password" binding:"required,min=8" example:"newsecret123"`
+}
+
