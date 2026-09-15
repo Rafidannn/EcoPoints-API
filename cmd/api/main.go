@@ -82,6 +82,7 @@ func main() {
 	rewardHandler := handler.NewRewardHandler(rewardService)
 	leaderboardHandler := handler.NewLeaderboardHandler(leaderboardService)
 	wasteDepositHandler := handler.NewWasteDepositHandler(wasteDepositService)
+	adminUserHandler := handler.NewAdminUserHandler(userRepo)
 
 	// 7. Initialize Gin Router
 	router := gin.Default()
@@ -193,6 +194,15 @@ func main() {
 				adminRewards.PUT("/:id", rewardHandler.Update)
 				adminRewards.DELETE("/:id", rewardHandler.Delete)
 			}
+		}
+
+		adminUsers := v1.Group("/admin/users")
+		adminUsers.Use(middleware.AuthMiddleware(jwtService), middleware.RoleMiddleware("admin"))
+		{
+			adminUsers.GET("", adminUserHandler.GetAll)
+			adminUsers.POST("", adminUserHandler.Create)
+			adminUsers.PUT("/:id", adminUserHandler.Update)
+			adminUsers.DELETE("/:id", adminUserHandler.Delete)
 		}
 
 		// 5. Leaderboard Route (public)

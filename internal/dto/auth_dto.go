@@ -35,3 +35,17 @@ type ChangePasswordRequest struct {
 	NewPassword     string `json:"new_password" binding:"required,min=8" example:"newsecret123"`
 }
 
+type AdminCreateUserRequest struct {
+	Name     string `json:"name" binding:"required,min=2,max=255"`
+	Email    string `json:"email" binding:"required,email,max=255"`
+	Password string `json:"password" binding:"required,min=8"`
+	Role     string `json:"role" binding:"required,oneof=user petugas admin"`
+}
+
+type AdminUpdateUserRequest struct {
+	Name          string  `json:"name" binding:"required,min=2,max=255"`
+	Email         string  `json:"email" binding:"required,email,max=255"`
+	Password      *string `json:"password"`
+	Role          string  `json:"role" binding:"required,oneof=user petugas admin"`
+	PointsBalance uint64  `json:"points_balance"`
+}
