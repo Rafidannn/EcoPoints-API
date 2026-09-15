@@ -22,12 +22,14 @@ type WasteDepositService interface {
 type wasteDepositService struct {
 	repo          repository.WasteDepositRepository
 	wasteTypeRepo repository.WasteTypeRepository
+	notifService  NotificationService
 }
 
-func NewWasteDepositService(repo repository.WasteDepositRepository, wasteTypeRepo repository.WasteTypeRepository) WasteDepositService {
+func NewWasteDepositService(repo repository.WasteDepositRepository, wasteTypeRepo repository.WasteTypeRepository, notifService NotificationService) WasteDepositService {
 	return &wasteDepositService{
 		repo:          repo,
 		wasteTypeRepo: wasteTypeRepo,
+		notifService:  notifService,
 	}
 }
 
@@ -171,6 +173,12 @@ func (s *wasteDepositService) Verify(depositID uint64, verifierID uint64, req dt
 		return nil, err
 	}
 
+	go s.notifService.SendToUser(
+		updated.UserID,
+		"Setoran Terverifikasi ✅",
+		fmt.Sprintf("Setoran #ECP-%05d telah diverifikasi. %d poin berhasil ditambahkan ke akun kamu!", updated.ID, earnedPoints),
+	)
+
 	res := s.toResponse(updated, &earnedPoints)
 	return &res, nil
 }
@@ -180,6 +188,12 @@ func (s *wasteDepositService) Reject(depositID uint64, actorID uint64, req dto.V
 	if err != nil {
 		return nil, err
 	}
+
+	go s.notifService.SendToUser(
+		updated.UserID,
+		"Setoran Ditolak ❌",
+		fmt.Sprintf("Setoran #ECP-%05d ditolak oleh petugas. Silakan hubungi bank sampah untuk informasi lebih lanjut.", updated.ID),
+	)
 
 	res := s.toResponse(updated, nil)
 	return &res, nil

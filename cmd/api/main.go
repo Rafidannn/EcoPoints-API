@@ -65,15 +65,17 @@ func main() {
 	rewardRepo := repository.NewRewardRepository(db)
 	leaderboardRepo := repository.NewLeaderboardRepository(db)
 	wasteDepositRepo := repository.NewWasteDepositRepository(db)
+	fcmRepo := repository.NewFCMTokenRepository(db)
 
 	// 5. Initialize Services
 	jwtService := service.NewJWTService(cfg.JWTSecret, cfg.JWTExpirationHours)
 	authService := service.NewAuthService(userRepo, jwtService)
 	wasteTypeService := service.NewWasteTypeService(wasteTypeRepo)
 	dropPointService := service.NewDropPointService(dropPointRepo)
-	rewardService := service.NewRewardService(rewardRepo)
+	notifService := service.NewNotificationService(cfg.FirebaseServiceAccount, fcmRepo)
+	rewardService := service.NewRewardService(rewardRepo, notifService)
 	leaderboardService := service.NewLeaderboardService(leaderboardRepo)
-	wasteDepositService := service.NewWasteDepositService(wasteDepositRepo, wasteTypeRepo)
+	wasteDepositService := service.NewWasteDepositService(wasteDepositRepo, wasteTypeRepo, notifService)
 
 	// 6. Initialize Handlers
 	authHandler := handler.NewAuthHandler(authService)
@@ -83,6 +85,7 @@ func main() {
 	leaderboardHandler := handler.NewLeaderboardHandler(leaderboardService)
 	wasteDepositHandler := handler.NewWasteDepositHandler(wasteDepositService)
 	adminUserHandler := handler.NewAdminUserHandler(userRepo)
+	notifHandler := handler.NewNotificationHandler(fcmRepo)
 
 	// 7. Initialize Gin Router
 	router := gin.Default()
@@ -218,6 +221,14 @@ func main() {
 			wasteDepositsGroup.PUT("/:id/verify", middleware.RoleMiddleware("admin", "petugas"), wasteDepositHandler.Verify)
 			wasteDepositsGroup.PUT("/:id/reject", middleware.RoleMiddleware("admin", "petugas"), wasteDepositHandler.Reject)
 			wasteDepositsGroup.PUT("/:id/cancel", wasteDepositHandler.Cancel)
+		}
+
+		// 7. Push Token Routes
+		pushGroup := v1.Group("/push-tokens")
+		pushGroup.Use(middleware.AuthMiddleware(jwtService))
+		{
+			pushGroup.POST("", notifHandler.RegisterToken)
+			pushGroup.DELETE("", notifHandler.DeleteToken)
 		}
 	}
 

@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"ecopoints-go-api/internal/dto"
@@ -29,12 +30,14 @@ type RewardService interface {
 }
 
 type rewardService struct {
-	rewardRepo repository.RewardRepository
+	rewardRepo   repository.RewardRepository
+	notifService NotificationService
 }
 
-func NewRewardService(rewardRepo repository.RewardRepository) RewardService {
+func NewRewardService(rewardRepo repository.RewardRepository, notifService NotificationService) RewardService {
 	return &rewardService{
-		rewardRepo: rewardRepo,
+		rewardRepo:   rewardRepo,
+		notifService: notifService,
 	}
 }
 
@@ -243,6 +246,20 @@ func (s *rewardService) CompleteRedemption(id uint64, notes *string) (*dto.Redem
 		return nil, err
 	}
 
+	rewardName := ""
+	if redemption.Reward != nil {
+		rewardName = redemption.Reward.Name
+	}
+	msg := fmt.Sprintf("Penukaran %s telah disetujui!", rewardName)
+	if rewardName == "" {
+		msg = "Penukaran hadiah kamu telah disetujui!"
+	}
+	go s.notifService.SendToUser(
+		redemption.UserID,
+		"Penukaran Hadiah Disetujui 🎁",
+		msg,
+	)
+
 	res := toRedemptionResponse(redemption)
 	return &res, nil
 }
@@ -252,6 +269,16 @@ func (s *rewardService) RejectRedemption(id uint64, notes *string) (*dto.Redempt
 	if err != nil {
 		return nil, err
 	}
+
+	rewardName := ""
+	if redemption.Reward != nil {
+		rewardName = redemption.Reward.Name
+	}
+	go s.notifService.SendToUser(
+		redemption.UserID,
+		"Penukaran Hadiah Ditolak ❌",
+		fmt.Sprintf("Penukaran %s ditolak. Poin dan stok hadiah telah dikembalikan.", rewardName),
+	)
 
 	res := toRedemptionResponse(redemption)
 	return &res, nil

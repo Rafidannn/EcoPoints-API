@@ -11,6 +11,8 @@ bin/
 # Environment files
 .env
 !.env.example
+serviceAccountKey*.json
+*firebase*.json
 
 # Test binary, built with `go test -c`
 *.test
