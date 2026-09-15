@@ -208,7 +208,7 @@ func toRedemptionResponse(r *model.RewardRedemption) dto.RedemptionResponse {
 		PointsUsed:  r.PointsUsed,
 		Status:      r.Status,
 		Notes:       r.Notes,
-		VoucherCode: r.VoucherCode,
+		VoucherCode: nil,
 		CreatedAt:   r.CreatedAt,
 	}
 }
