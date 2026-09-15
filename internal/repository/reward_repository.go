@@ -151,11 +151,14 @@ func (r *rewardRepository) CompleteRedemption(id uint64, notes *string, voucherC
 		}
 
 		red.Status = "completed"
-		red.VoucherCode = &voucherCode
 		if notes != nil && *notes != "" {
 			red.Notes = notes
 		}
-		if err := tx.Save(&red).Error; err != nil {
+		updates := map[string]interface{}{"status": red.Status}
+		if notes != nil && *notes != "" {
+			updates["notes"] = red.Notes
+		}
+		if err := tx.Model(&red).Updates(updates).Error; err != nil {
 			return fmt.Errorf("gagal menyelesaikan penukaran: %w", err)
 		}
 
