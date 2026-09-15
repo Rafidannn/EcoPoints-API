@@ -8,6 +8,10 @@ ecopoints-api
 main
 bin/
 
+# Frontend dependencies and build output
+node_modules/
+dist/
+
 # Environment files
 .env
 !.env.example
