@@ -18,7 +18,7 @@ type RewardRepository interface {
 	Redeem(userID uint64, reward *model.Reward, notes *string) (*model.RewardRedemption, error)
 	GetMyRedemptions(userID uint64) ([]model.RewardRedemption, error)
 	GetAllRedemptions() ([]model.RewardRedemption, error)
-	CompleteRedemption(id uint64, notes *string, voucherCode string) (*model.RewardRedemption, error)
+	CompleteRedemption(id uint64, notes *string) (*model.RewardRedemption, error)
 	RejectRedemption(id uint64, notes *string) (*model.RewardRedemption, error)
 }
 
@@ -137,7 +137,7 @@ func (r *rewardRepository) GetAllRedemptions() ([]model.RewardRedemption, error)
 	return redemptions, nil
 }
 
-func (r *rewardRepository) CompleteRedemption(id uint64, notes *string, voucherCode string) (*model.RewardRedemption, error) {
+func (r *rewardRepository) CompleteRedemption(id uint64, notes *string) (*model.RewardRedemption, error) {
 	var redemption *model.RewardRedemption
 
 	err := r.db.Transaction(func(tx *gorm.DB) error {

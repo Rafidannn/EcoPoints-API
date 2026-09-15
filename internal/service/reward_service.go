@@ -1,9 +1,7 @@
 package service
 
 import (
-	"crypto/rand"
 	"errors"
-	"fmt"
 	"time"
 
 	"ecopoints-go-api/internal/dto"
@@ -240,12 +238,7 @@ func (s *rewardService) GetAllRedemptions() ([]dto.RedemptionResponse, error) {
 }
 
 func (s *rewardService) CompleteRedemption(id uint64, notes *string) (*dto.RedemptionResponse, error) {
-	voucherCode, err := generateVoucherCode()
-	if err != nil {
-		return nil, err
-	}
-
-	redemption, err := s.rewardRepo.CompleteRedemption(id, notes, voucherCode)
+	redemption, err := s.rewardRepo.CompleteRedemption(id, notes)
 	if err != nil {
 		return nil, err
 	}
@@ -262,17 +255,4 @@ func (s *rewardService) RejectRedemption(id uint64, notes *string) (*dto.Redempt
 
 	res := toRedemptionResponse(redemption)
 	return &res, nil
-}
-
-func generateVoucherCode() (string, error) {
-	const charset = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
-
-	b := make([]byte, 8)
-	if _, err := rand.Read(b); err != nil {
-		return "", err
-	}
-	for i := range b {
-		b[i] = charset[int(b[i])%len(charset)]
-	}
-	return fmt.Sprintf("EP-RDM-%s", string(b)), nil
 }
