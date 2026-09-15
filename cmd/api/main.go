@@ -66,6 +66,7 @@ func main() {
 	leaderboardRepo := repository.NewLeaderboardRepository(db)
 	wasteDepositRepo := repository.NewWasteDepositRepository(db)
 	fcmRepo := repository.NewFCMTokenRepository(db)
+	statisticsRepo := repository.NewStatisticsRepository(db)
 
 	// 5. Initialize Services
 	jwtService := service.NewJWTService(cfg.JWTSecret, cfg.JWTExpirationHours)
@@ -86,6 +87,7 @@ func main() {
 	wasteDepositHandler := handler.NewWasteDepositHandler(wasteDepositService)
 	adminUserHandler := handler.NewAdminUserHandler(userRepo)
 	notifHandler := handler.NewNotificationHandler(fcmRepo)
+	statisticsHandler := handler.NewStatisticsHandler(statisticsRepo)
 
 	// 7. Initialize Gin Router
 	router := gin.Default()
@@ -210,6 +212,7 @@ func main() {
 
 		// 5. Leaderboard Route (public)
 		v1.GET("/leaderboard", leaderboardHandler.GetLeaderboard)
+		v1.GET("/statistics", statisticsHandler.GetPublic)
 
 		// 6. Waste Deposits Routes
 		wasteDepositsGroup := v1.Group("/waste-deposits")
