@@ -39,7 +39,7 @@ func (r *rewardRepository) Update(reward *model.Reward) error {
 }
 
 func (r *rewardRepository) Delete(id uint64) error {
-	result := r.db.Delete(&model.Reward{}, id)
+	result := r.db.Model(&model.Reward{}).Where("id = ?", id).Update("is_active", false)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -51,7 +51,7 @@ func (r *rewardRepository) Delete(id uint64) error {
 
 func (r *rewardRepository) FindAll() ([]model.Reward, error) {
 	var rewards []model.Reward
-	err := r.db.Order("id asc").Find(&rewards).Error
+	err := r.db.Where("is_active = ?", true).Order("id asc").Find(&rewards).Error
 	if err != nil {
 		return nil, err
 	}
