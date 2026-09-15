@@ -15,6 +15,8 @@ type WasteDepositService interface {
 	GetMyDeposits(userID uint64) ([]dto.WasteDepositResponse, error)
 	GetAll(status string) ([]dto.WasteDepositResponse, error)
 	Verify(depositID uint64, verifierID uint64, req dto.VerifyWasteDepositRequest) (*dto.WasteDepositResponse, error)
+	Reject(depositID uint64, actorID uint64, req dto.VerifyWasteDepositRequest) (*dto.WasteDepositResponse, error)
+	Cancel(depositID uint64, userID uint64, req dto.VerifyWasteDepositRequest) (*dto.WasteDepositResponse, error)
 }
 
 type wasteDepositService struct {
@@ -170,5 +172,25 @@ func (s *wasteDepositService) Verify(depositID uint64, verifierID uint64, req dt
 	}
 
 	res := s.toResponse(updated, &earnedPoints)
+	return &res, nil
+}
+
+func (s *wasteDepositService) Reject(depositID uint64, actorID uint64, req dto.VerifyWasteDepositRequest) (*dto.WasteDepositResponse, error) {
+	updated, err := s.repo.Reject(depositID, actorID, req.Notes)
+	if err != nil {
+		return nil, err
+	}
+
+	res := s.toResponse(updated, nil)
+	return &res, nil
+}
+
+func (s *wasteDepositService) Cancel(depositID uint64, userID uint64, req dto.VerifyWasteDepositRequest) (*dto.WasteDepositResponse, error) {
+	updated, err := s.repo.Cancel(depositID, userID, req.Notes)
+	if err != nil {
+		return nil, err
+	}
+
+	res := s.toResponse(updated, nil)
 	return &res, nil
 }

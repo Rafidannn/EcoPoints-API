@@ -327,3 +327,92 @@ func (h *RewardHandler) GetMyRedemptions(c *gin.Context) {
 
 	c.JSON(http.StatusOK, dto.SuccessResponse("Redemptions retrieved", redemptions))
 }
+
+// GetAllRedemptions godoc
+// @Summary Get all reward redemptions
+// @Description Get list of all reward redemptions (Admin/Petugas only)
+// @Tags Rewards
+// @Security BearerAuth
+// @Param Authorization header string true "Bearer token"
+// @Produce json
+// @Success 200 {object} dto.APIResponse{data=[]dto.RedemptionResponse}
+// @Failure 401 {object} dto.APIErrorResponse
+// @Failure 403 {object} dto.APIErrorResponse
+// @Router /api/v1/rewards/redemptions [get]
+func (h *RewardHandler) GetAllRedemptions(c *gin.Context) {
+	redemptions, err := h.rewardService.GetAllRedemptions()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse("Gagal mengambil data penukaran", gin.H{"error": err.Error()}))
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponse("Semua penukaran berhasil diambil", redemptions))
+}
+
+// CompleteRedemption godoc
+// @Summary Complete a reward redemption
+// @Description Mark a pending redemption as completed and issue its voucher code (Admin/Petugas only)
+// @Tags Rewards
+// @Security BearerAuth
+// @Param Authorization header string true "Bearer token"
+// @Param id path int true "Redemption ID"
+// @Param request body dto.RedeemRewardRequest false "Optional notes"
+// @Produce json
+// @Success 200 {object} dto.APIResponse{data=dto.RedemptionResponse}
+// @Failure 400 {object} dto.APIErrorResponse
+// @Failure 401 {object} dto.APIErrorResponse
+// @Failure 403 {object} dto.APIErrorResponse
+// @Failure 404 {object} dto.APIErrorResponse
+// @Router /api/v1/rewards/redemptions/{id}/verify [put]
+func (h *RewardHandler) CompleteRedemption(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse("Invalid ID format", gin.H{"id": "Must be a valid integer ID"}))
+		return
+	}
+
+	var req dto.RedeemRewardRequest
+	_ = c.ShouldBindJSON(&req) // optional body
+
+	redemption, err := h.rewardService.CompleteRedemption(id, req.Notes)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse(err.Error(), nil))
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponse("Penukaran berhasil diselesaikan!", redemption))
+}
+
+// RejectRedemption godoc
+// @Summary Reject a reward redemption
+// @Description Reject a pending redemption and restore the user's points and reward stock (Admin/Petugas only)
+// @Tags Rewards
+// @Security BearerAuth
+// @Param Authorization header string true "Bearer token"
+// @Param id path int true "Redemption ID"
+// @Param request body dto.RedeemRewardRequest false "Rejection reason"
+// @Produce json
+// @Success 200 {object} dto.APIResponse{data=dto.RedemptionResponse}
+// @Failure 400 {object} dto.APIErrorResponse
+// @Failure 401 {object} dto.APIErrorResponse
+// @Failure 403 {object} dto.APIErrorResponse
+// @Failure 404 {object} dto.APIErrorResponse
+// @Router /api/v1/rewards/redemptions/{id}/reject [put]
+func (h *RewardHandler) RejectRedemption(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse("Invalid ID format", gin.H{"id": "Must be a valid integer ID"}))
+		return
+	}
+
+	var req dto.RedeemRewardRequest
+	_ = c.ShouldBindJSON(&req) // optional body
+
+	redemption, err := h.rewardService.RejectRedemption(id, req.Notes)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse(err.Error(), nil))
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponse("Penukaran ditolak, poin & stok telah dikembalikan", redemption))
+}

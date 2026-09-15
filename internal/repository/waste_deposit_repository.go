@@ -16,6 +16,8 @@ type WasteDepositRepository interface {
 	GetByUserID(userID uint64) ([]model.WasteDeposit, error)
 	GetAll(status string) ([]model.WasteDeposit, error)
 	Verify(depositID uint64, verifierID uint64, actualWeight float64, notes *string) (*model.WasteDeposit, uint, error)
+	Reject(depositID uint64, actorID uint64, notes *string) (*model.WasteDeposit, error)
+	Cancel(depositID uint64, userID uint64, notes *string) (*model.WasteDeposit, error)
 }
 
 type wasteDepositRepository struct {
@@ -153,4 +155,84 @@ func (r *wasteDepositRepository) Verify(depositID uint64, verifierID uint64, act
 		return refreshed, earnedPoints, nil
 	}
 	return &deposit, earnedPoints, nil
+}
+
+// Reject rejects a pending deposit (staff/admin only). No points are awarded.
+func (r *wasteDepositRepository) Reject(depositID uint64, actorID uint64, notes *string) (*model.WasteDeposit, error) {
+	var deposit model.WasteDeposit
+
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.First(&deposit, depositID).Error; err != nil {
+			return fmt.Errorf("setoran tidak ditemukan: %w", err)
+		}
+
+		if deposit.Status != "pending" {
+			return errors.New("hanya setoran berstatus pending yang bisa ditolak")
+		}
+
+		now := time.Now()
+		deposit.Status = "rejected"
+		deposit.VerifiedBy = &actorID
+		deposit.VerifiedAt = &now
+		if notes != nil && *notes != "" {
+			deposit.Notes = notes
+		}
+
+		if err := tx.Save(&deposit).Error; err != nil {
+			return fmt.Errorf("gagal memperbarui setoran: %w", err)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	// Fetch refreshed record with preloads
+	refreshed, _ := r.GetByID(depositID)
+	if refreshed != nil {
+		return refreshed, nil
+	}
+	return &deposit, nil
+}
+
+// Cancel cancels a pending deposit by its owner (nasabah).
+func (r *wasteDepositRepository) Cancel(depositID uint64, userID uint64, notes *string) (*model.WasteDeposit, error) {
+	var deposit model.WasteDeposit
+
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.First(&deposit, depositID).Error; err != nil {
+			return fmt.Errorf("setoran tidak ditemukan: %w", err)
+		}
+
+		if deposit.UserID != userID {
+			return errors.New("Anda tidak berhak membatalkan setoran ini")
+		}
+
+		if deposit.Status != "pending" {
+			return errors.New("hanya setoran berstatus pending yang bisa dibatalkan")
+		}
+
+		deposit.Status = "cancelled"
+		if notes != nil && *notes != "" {
+			deposit.Notes = notes
+		}
+
+		if err := tx.Save(&deposit).Error; err != nil {
+			return fmt.Errorf("gagal memperbarui setoran: %w", err)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	refreshed, _ := r.GetByID(depositID)
+	if refreshed != nil {
+		return refreshed, nil
+	}
+	return &deposit, nil
 }

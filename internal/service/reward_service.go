@@ -1,7 +1,9 @@
 package service
 
 import (
+	"crypto/rand"
 	"errors"
+	"fmt"
 	"time"
 
 	"ecopoints-go-api/internal/dto"
@@ -10,9 +12,9 @@ import (
 )
 
 var (
-	ErrRewardNotFound    = errors.New("reward not found")
+	ErrRewardNotFound     = errors.New("reward not found")
 	ErrInsufficientPoints = errors.New("saldo poin tidak mencukupi")
-	ErrOutOfStock        = errors.New("stok hadiah habis")
+	ErrOutOfStock         = errors.New("stok hadiah habis")
 )
 
 type RewardService interface {
@@ -23,6 +25,9 @@ type RewardService interface {
 	DeleteReward(id uint64) error
 	RedeemReward(userID uint64, rewardID uint64, notes *string) (*dto.RedemptionResponse, error)
 	GetMyRedemptions(userID uint64) ([]dto.RedemptionResponse, error)
+	GetAllRedemptions() ([]dto.RedemptionResponse, error)
+	CompleteRedemption(id uint64, notes *string) (*dto.RedemptionResponse, error)
+	RejectRedemption(id uint64, notes *string) (*dto.RedemptionResponse, error)
 }
 
 type rewardService struct {
@@ -174,6 +179,7 @@ func (s *rewardService) RedeemReward(userID uint64, rewardID uint64, notes *stri
 	res := &dto.RedemptionResponse{
 		ID:         redemption.ID,
 		UserID:     redemption.UserID,
+		UserName:   "",
 		RewardID:   redemption.RewardID,
 		RewardName: rewardName,
 		PointsUsed: redemption.PointsUsed,
@@ -184,6 +190,29 @@ func (s *rewardService) RedeemReward(userID uint64, rewardID uint64, notes *stri
 	return res, nil
 }
 
+func toRedemptionResponse(r *model.RewardRedemption) dto.RedemptionResponse {
+	rewardName := ""
+	if r.Reward != nil {
+		rewardName = r.Reward.Name
+	}
+	userName := ""
+	if r.User != nil {
+		userName = r.User.Name
+	}
+	return dto.RedemptionResponse{
+		ID:          r.ID,
+		UserID:      r.UserID,
+		UserName:    userName,
+		RewardID:    r.RewardID,
+		RewardName:  rewardName,
+		PointsUsed:  r.PointsUsed,
+		Status:      r.Status,
+		Notes:       r.Notes,
+		VoucherCode: r.VoucherCode,
+		CreatedAt:   r.CreatedAt,
+	}
+}
+
 func (s *rewardService) GetMyRedemptions(userID uint64) ([]dto.RedemptionResponse, error) {
 	redemptions, err := s.rewardRepo.GetMyRedemptions(userID)
 	if err != nil {
@@ -192,20 +221,58 @@ func (s *rewardService) GetMyRedemptions(userID uint64) ([]dto.RedemptionRespons
 
 	result := make([]dto.RedemptionResponse, len(redemptions))
 	for i, r := range redemptions {
-		rewardName := ""
-		if r.Reward != nil {
-			rewardName = r.Reward.Name
-		}
-		result[i] = dto.RedemptionResponse{
-			ID:         r.ID,
-			UserID:     r.UserID,
-			RewardID:   r.RewardID,
-			RewardName: rewardName,
-			PointsUsed: r.PointsUsed,
-			Status:     r.Status,
-			Notes:      r.Notes,
-			CreatedAt:  r.CreatedAt,
-		}
+		result[i] = toRedemptionResponse(&r)
 	}
 	return result, nil
+}
+
+func (s *rewardService) GetAllRedemptions() ([]dto.RedemptionResponse, error) {
+	redemptions, err := s.rewardRepo.GetAllRedemptions()
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]dto.RedemptionResponse, len(redemptions))
+	for i, r := range redemptions {
+		result[i] = toRedemptionResponse(&r)
+	}
+	return result, nil
+}
+
+func (s *rewardService) CompleteRedemption(id uint64, notes *string) (*dto.RedemptionResponse, error) {
+	voucherCode, err := generateVoucherCode()
+	if err != nil {
+		return nil, err
+	}
+
+	redemption, err := s.rewardRepo.CompleteRedemption(id, notes, voucherCode)
+	if err != nil {
+		return nil, err
+	}
+
+	res := toRedemptionResponse(redemption)
+	return &res, nil
+}
+
+func (s *rewardService) RejectRedemption(id uint64, notes *string) (*dto.RedemptionResponse, error) {
+	redemption, err := s.rewardRepo.RejectRedemption(id, notes)
+	if err != nil {
+		return nil, err
+	}
+
+	res := toRedemptionResponse(redemption)
+	return &res, nil
+}
+
+func generateVoucherCode() (string, error) {
+	const charset = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+
+	b := make([]byte, 8)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	for i := range b {
+		b[i] = charset[int(b[i])%len(charset)]
+	}
+	return fmt.Sprintf("EP-RDM-%s", string(b)), nil
 }

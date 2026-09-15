@@ -157,3 +157,84 @@ func (h *WasteDepositHandler) Verify(c *gin.Context) {
 
 	c.JSON(http.StatusOK, dto.SuccessResponse("Setoran sampah berhasil diverifikasi & poin telah ditambahkan!", res))
 }
+
+// Reject godoc
+// @Summary Reject waste deposit (Staff/Admin only)
+// @Description Rejects a pending deposit without awarding points
+// @Tags Waste Deposits
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Waste Deposit ID"
+// @Param request body dto.VerifyWasteDepositRequest false "Rejection notes"
+// @Success 200 {object} dto.APIResponse{data=dto.WasteDepositResponse}
+// @Failure 400 {object} dto.APIErrorResponse
+// @Failure 401 {object} dto.APIErrorResponse
+// @Failure 403 {object} dto.APIErrorResponse
+// @Failure 500 {object} dto.APIErrorResponse
+// @Router /api/v1/waste-deposits/{id}/reject [put]
+func (h *WasteDepositHandler) Reject(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse("ID tidak valid", nil))
+		return
+	}
+
+	actorIDVal, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Unauthorized", nil))
+		return
+	}
+	actorID := actorIDVal.(uint64)
+
+	var req dto.VerifyWasteDepositRequest
+	_ = c.ShouldBindJSON(&req) // optional body
+
+	res, err := h.wasteDepositService.Reject(id, actorID, req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse(err.Error(), nil))
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponse("Setoran sampah berhasil ditolak!", res))
+}
+
+// Cancel godoc
+// @Summary Cancel waste deposit (owner only)
+// @Description Cancels a pending deposit by its owner. No points are involved.
+// @Tags Waste Deposits
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Waste Deposit ID"
+// @Param request body dto.VerifyWasteDepositRequest false "Cancellation notes"
+// @Success 200 {object} dto.APIResponse{data=dto.WasteDepositResponse}
+// @Failure 400 {object} dto.APIErrorResponse
+// @Failure 401 {object} dto.APIErrorResponse
+// @Failure 500 {object} dto.APIErrorResponse
+// @Router /api/v1/waste-deposits/{id}/cancel [put]
+func (h *WasteDepositHandler) Cancel(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse("ID tidak valid", nil))
+		return
+	}
+
+	userIDVal, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Unauthorized", nil))
+		return
+	}
+	userID := userIDVal.(uint64)
+
+	var req dto.VerifyWasteDepositRequest
+	_ = c.ShouldBindJSON(&req) // optional body
+
+	res, err := h.wasteDepositService.Cancel(id, userID, req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse(err.Error(), nil))
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponse("Setoran sampah berhasil dibatalkan!", res))
+}

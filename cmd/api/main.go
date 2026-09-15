@@ -174,6 +174,15 @@ func main() {
 			{
 				authRewards.POST("/:id/redeem", rewardHandler.Redeem)
 				authRewards.GET("/my-redemptions", rewardHandler.GetMyRedemptions)
+
+				// Admin/Petugas redemption management routes
+				staffRedemptions := authRewards.Group("")
+				staffRedemptions.Use(middleware.RoleMiddleware("admin", "petugas"))
+				{
+					staffRedemptions.GET("/redemptions", rewardHandler.GetAllRedemptions)
+					staffRedemptions.PUT("/redemptions/:id/verify", rewardHandler.CompleteRedemption)
+					staffRedemptions.PUT("/redemptions/:id/reject", rewardHandler.RejectRedemption)
+				}
 			}
 
 			// Admin only write routes
@@ -197,6 +206,8 @@ func main() {
 			wasteDepositsGroup.GET("", wasteDepositHandler.GetAll)
 			wasteDepositsGroup.GET("/:id", wasteDepositHandler.GetByID)
 			wasteDepositsGroup.PUT("/:id/verify", middleware.RoleMiddleware("admin", "petugas"), wasteDepositHandler.Verify)
+			wasteDepositsGroup.PUT("/:id/reject", middleware.RoleMiddleware("admin", "petugas"), wasteDepositHandler.Reject)
+			wasteDepositsGroup.PUT("/:id/cancel", wasteDepositHandler.Cancel)
 		}
 	}
 

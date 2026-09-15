@@ -2,6 +2,7 @@ package repository
 
 import (
 	"errors"
+	"fmt"
 
 	"ecopoints-go-api/internal/model"
 
@@ -16,6 +17,9 @@ type RewardRepository interface {
 	FindByID(id uint64) (*model.Reward, error)
 	Redeem(userID uint64, reward *model.Reward, notes *string) (*model.RewardRedemption, error)
 	GetMyRedemptions(userID uint64) ([]model.RewardRedemption, error)
+	GetAllRedemptions() ([]model.RewardRedemption, error)
+	CompleteRedemption(id uint64, notes *string, voucherCode string) (*model.RewardRedemption, error)
+	RejectRedemption(id uint64, notes *string) (*model.RewardRedemption, error)
 }
 
 type rewardRepository struct {
@@ -117,9 +121,96 @@ func (r *rewardRepository) Redeem(userID uint64, reward *model.Reward, notes *st
 
 func (r *rewardRepository) GetMyRedemptions(userID uint64) ([]model.RewardRedemption, error) {
 	var redemptions []model.RewardRedemption
-	err := r.db.Preload("Reward").Where("user_id = ?", userID).Order("created_at DESC").Find(&redemptions).Error
+	err := r.db.Preload("Reward").Preload("User").Where("user_id = ?", userID).Order("created_at DESC").Find(&redemptions).Error
 	if err != nil {
 		return nil, err
 	}
 	return redemptions, nil
+}
+
+func (r *rewardRepository) GetAllRedemptions() ([]model.RewardRedemption, error) {
+	var redemptions []model.RewardRedemption
+	err := r.db.Preload("Reward").Preload("User").Order("created_at DESC").Find(&redemptions).Error
+	if err != nil {
+		return nil, err
+	}
+	return redemptions, nil
+}
+
+func (r *rewardRepository) CompleteRedemption(id uint64, notes *string, voucherCode string) (*model.RewardRedemption, error) {
+	var redemption *model.RewardRedemption
+
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		var red model.RewardRedemption
+		if err := tx.Preload("Reward").Preload("User").First(&red, id).Error; err != nil {
+			return fmt.Errorf("penukaran tidak ditemukan: %w", err)
+		}
+
+		if red.Status != "pending" {
+			return errors.New("hanya penukaran berstatus pending yang bisa diselesaikan")
+		}
+
+		red.Status = "completed"
+		red.VoucherCode = &voucherCode
+		if notes != nil && *notes != "" {
+			red.Notes = notes
+		}
+		if err := tx.Save(&red).Error; err != nil {
+			return fmt.Errorf("gagal menyelesaikan penukaran: %w", err)
+		}
+
+		redemption = &red
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+	return redemption, nil
+}
+
+// RejectRedemption rejects a pending redemption and restores the user's points and reward stock
+func (r *rewardRepository) RejectRedemption(id uint64, notes *string) (*model.RewardRedemption, error) {
+	var redemption *model.RewardRedemption
+
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		var red model.RewardRedemption
+		if err := tx.Preload("Reward").Preload("User").First(&red, id).Error; err != nil {
+			return fmt.Errorf("penukaran tidak ditemukan: %w", err)
+		}
+
+		if red.Status != "pending" {
+			return errors.New("hanya penukaran berstatus pending yang bisa ditolak")
+		}
+
+		// Restore user points
+		if err := tx.Model(&model.User{}).
+			Where("id = ?", red.UserID).
+			Update("points_balance", gorm.Expr("points_balance + ?", red.PointsUsed)).Error; err != nil {
+			return fmt.Errorf("gagal mengembalikan poin pengguna: %w", err)
+		}
+
+		// Restore reward stock
+		if err := tx.Model(&model.Reward{}).
+			Where("id = ?", red.RewardID).
+			Update("stock", gorm.Expr("stock + 1")).Error; err != nil {
+			return fmt.Errorf("gagal mengembalikan stok hadiah: %w", err)
+		}
+
+		red.Status = "rejected"
+		if notes != nil && *notes != "" {
+			red.Notes = notes
+		}
+		if err := tx.Save(&red).Error; err != nil {
+			return fmt.Errorf("gagal menolak penukaran: %w", err)
+		}
+
+		redemption = &red
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+	return redemption, nil
 }
