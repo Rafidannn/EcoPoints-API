@@ -204,7 +204,11 @@ func (r *rewardRepository) RejectRedemption(id uint64, notes *string) (*model.Re
 		if notes != nil && *notes != "" {
 			red.Notes = notes
 		}
-		if err := tx.Save(&red).Error; err != nil {
+		updates := map[string]interface{}{"status": red.Status}
+		if notes != nil && *notes != "" {
+			updates["notes"] = red.Notes
+		}
+		if err := tx.Model(&red).Updates(updates).Error; err != nil {
 			return fmt.Errorf("gagal menolak penukaran: %w", err)
 		}
 
