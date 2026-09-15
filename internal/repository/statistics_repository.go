@@ -23,7 +23,7 @@ func (r *statisticsRepository) GetPublicStatistics() (*dto.PublicStatisticsRespo
 	if err := r.db.Table("waste_deposits").Where("status = ?", "verified").Select("COALESCE(SUM(weight_kg), 0)").Scan(&result.TotalWeightKg).Error; err != nil {
 		return nil, err
 	}
-	if err := r.db.Table("point_transactions").Where("type = ?", "credit").Select("COALESCE(SUM(amount), 0)").Scan(&result.TotalPointsIssued).Error; err != nil {
+	if err := r.db.Table("point_transactions").Where("type IN (?, ?)", "credit", "earned").Select("COALESCE(SUM(amount), 0)").Scan(&result.TotalPointsIssued).Error; err != nil {
 		return nil, err
 	}
 	if err := r.db.Table("drop_points").Where("is_active = ?", true).Count(&result.ActiveDropPoints).Error; err != nil {

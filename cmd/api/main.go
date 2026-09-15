@@ -67,6 +67,7 @@ func main() {
 	wasteDepositRepo := repository.NewWasteDepositRepository(db)
 	fcmRepo := repository.NewFCMTokenRepository(db)
 	statisticsRepo := repository.NewStatisticsRepository(db)
+	pointTransactionRepo := repository.NewPointTransactionRepository(db)
 
 	// 5. Initialize Services
 	jwtService := service.NewJWTService(cfg.JWTSecret, cfg.JWTExpirationHours)
@@ -88,6 +89,7 @@ func main() {
 	adminUserHandler := handler.NewAdminUserHandler(userRepo)
 	notifHandler := handler.NewNotificationHandler(fcmRepo)
 	statisticsHandler := handler.NewStatisticsHandler(statisticsRepo)
+	pointTransactionHandler := handler.NewPointTransactionHandler(pointTransactionRepo)
 
 	// 7. Initialize Gin Router
 	router := gin.Default()
@@ -225,6 +227,9 @@ func main() {
 			wasteDepositsGroup.PUT("/:id/reject", middleware.RoleMiddleware("admin", "petugas"), wasteDepositHandler.Reject)
 			wasteDepositsGroup.PUT("/:id/cancel", wasteDepositHandler.Cancel)
 		}
+
+		v1.GET("/point-transactions", middleware.AuthMiddleware(jwtService), pointTransactionHandler.GetMyTransactions)
+		v1.GET("/reports/summary", middleware.AuthMiddleware(jwtService), pointTransactionHandler.GetReportSummary)
 
 		// 7. Push Token Routes
 		pushGroup := v1.Group("/push-tokens")

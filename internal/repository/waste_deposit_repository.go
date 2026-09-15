@@ -130,7 +130,7 @@ func (r *wasteDepositRepository) Verify(depositID uint64, verifierID uint64, act
 		refID := deposit.ID
 		pt := model.PointTransaction{
 			UserID:        deposit.UserID,
-			Type:          "earned",
+			Type:          "credit",
 			Amount:        earnedPoints,
 			ReferenceType: &refType,
 			ReferenceID:   &refID,

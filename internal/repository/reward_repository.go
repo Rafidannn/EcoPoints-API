@@ -110,6 +110,26 @@ func (r *rewardRepository) Redeem(userID uint64, reward *model.Reward, notes *st
 			return err
 		}
 
+		// 6. Record the point debit for this user so frontend transaction history aligns with API contract
+		debitType := "debit"
+		refType := "reward_redemption"
+		refID := redemption.ID
+		desc := "Redeem reward"
+		if notes != nil && *notes != "" {
+			desc = *notes
+		}
+		trans := model.PointTransaction{
+			UserID:        userID,
+			Type:          debitType,
+			Amount:        reward.PointCost,
+			ReferenceType: &refType,
+			ReferenceID:   &refID,
+			Description:   &desc,
+		}
+		if err := tx.Create(&trans).Error; err != nil {
+			return err
+		}
+
 		return nil
 	})
 
