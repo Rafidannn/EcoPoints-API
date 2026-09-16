@@ -12,6 +12,7 @@ type FCMTokenRepository interface {
 	Upsert(userID uint64, token, platform string) error
 	DeleteByToken(userID uint64, token string) error
 	GetTokensByUserID(userID uint64) ([]string, error)
+	GetAllTokens() ([]string, error)
 }
 
 type fcmTokenRepository struct {
@@ -54,6 +55,14 @@ func (r *fcmTokenRepository) GetTokensByUserID(userID uint64) ([]string, error) 
 	err := r.db.
 		Model(&model.FCMToken{}).
 		Where("user_id = ?", userID).
+		Pluck("token", &tokens).Error
+	return tokens, err
+}
+
+func (r *fcmTokenRepository) GetAllTokens() ([]string, error) {
+	var tokens []string
+	err := r.db.
+		Model(&model.FCMToken{}).
 		Pluck("token", &tokens).Error
 	return tokens, err
 }

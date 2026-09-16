@@ -15,6 +15,7 @@ import (
 
 type NotificationService interface {
 	SendToUser(userID uint64, title, body string) error
+	SendToAll(title, body string) (int, error)
 }
 
 type notificationService struct {
@@ -22,6 +23,7 @@ type notificationService struct {
 	serviceAccount string
 	tokenRepo      interface {
 		GetTokensByUserID(userID uint64) ([]string, error)
+		GetAllTokens() ([]string, error)
 	}
 }
 
@@ -29,6 +31,7 @@ func NewNotificationService(
 	serviceAccount string,
 	tokenRepo interface {
 		GetTokensByUserID(userID uint64) ([]string, error)
+		GetAllTokens() ([]string, error)
 	},
 ) NotificationService {
 	projectID := extractProjectID(serviceAccount)
@@ -107,6 +110,33 @@ func (s *notificationService) SendToUser(userID uint64, title, body string) erro
 		}
 	}
 	return nil
+}
+
+func (s *notificationService) SendToAll(title, body string) (int, error) {
+	if s.serviceAccount == "" || s.projectID == "" {
+		return 0, nil
+	}
+
+	tokens, err := s.tokenRepo.GetAllTokens()
+	if err != nil || len(tokens) == 0 {
+		return 0, nil
+	}
+
+	accessToken, err := s.getAccessToken()
+	if err != nil {
+		log.Printf("FCM access token error: %v", err)
+		return 0, err
+	}
+
+	sentCount := 0
+	for _, token := range tokens {
+		if err := s.sendFCM(accessToken, token, title, body); err == nil {
+			sentCount++
+		} else {
+			log.Printf("FCM broadcast kirim gagal: %v", err)
+		}
+	}
+	return sentCount, nil
 }
 
 func (s *notificationService) sendFCM(accessToken, deviceToken, title, body string) error {

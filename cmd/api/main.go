@@ -87,7 +87,7 @@ func main() {
 	leaderboardHandler := handler.NewLeaderboardHandler(leaderboardService)
 	wasteDepositHandler := handler.NewWasteDepositHandler(wasteDepositService)
 	adminUserHandler := handler.NewAdminUserHandler(userRepo)
-	notifHandler := handler.NewNotificationHandler(fcmRepo)
+	notifHandler := handler.NewNotificationHandler(fcmRepo, notifService)
 	statisticsHandler := handler.NewStatisticsHandler(statisticsRepo)
 	pointTransactionHandler := handler.NewPointTransactionHandler(pointTransactionRepo)
 
@@ -239,6 +239,13 @@ func main() {
 		{
 			pushGroup.POST("", notifHandler.RegisterToken)
 			pushGroup.DELETE("", notifHandler.DeleteToken)
+		}
+
+		// 8. Admin Notification Broadcast / Direct
+		adminNotifs := v1.Group("/admin/notifications")
+		adminNotifs.Use(middleware.AuthMiddleware(jwtService), middleware.RoleMiddleware("admin", "petugas"))
+		{
+			adminNotifs.POST("/send", notifHandler.SendNotification)
 		}
 	}
 
