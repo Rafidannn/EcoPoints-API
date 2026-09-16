@@ -1,6 +1,6 @@
 module ecopoints-go-api
 
-go 1.26.0
+go 1.24.0
 
 require (
 	github.com/gin-gonic/gin v1.10.0
@@ -11,7 +11,7 @@ require (
 	github.com/swaggo/gin-swagger v1.6.0
 	github.com/swaggo/swag v1.16.3
 	golang.org/x/crypto v0.27.0
-	golang.org/x/oauth2 v0.37.0
+	golang.org/x/oauth2 v0.28.0
 	gorm.io/driver/mysql v1.5.7
 	gorm.io/gorm v1.25.12
 )
