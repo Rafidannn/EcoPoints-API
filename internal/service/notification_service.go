@@ -43,19 +43,24 @@ func NewNotificationService(
 }
 
 func extractProjectID(serviceAccount string) string {
-	if serviceAccount == "" {
-		return ""
-	}
 	raw := serviceAccount
-	if !strings.HasPrefix(strings.TrimSpace(serviceAccount), "{") {
-		data, err := os.ReadFile(serviceAccount)
+	if raw == "" {
+		raw = "serviceAccountKey.json"
+	}
+	if !strings.HasPrefix(strings.TrimSpace(raw), "{") {
+		data, err := os.ReadFile(raw)
 		if err != nil {
-			return ""
+			data, err = os.ReadFile("serviceAccountKey.json")
+			if err != nil {
+				log.Printf("FCM extractProjectID error membaca %s: %v", raw, err)
+				return ""
+			}
 		}
 		raw = string(data)
 	}
 	var m map[string]interface{}
 	if err := json.Unmarshal([]byte(raw), &m); err != nil {
+		log.Printf("FCM extractProjectID unmarshal error: %v", err)
 		return ""
 	}
 	if v, ok := m["project_id"].(string); ok {
@@ -66,10 +71,16 @@ func extractProjectID(serviceAccount string) string {
 
 func (s *notificationService) getAccessToken() (string, error) {
 	raw := s.serviceAccount
+	if raw == "" {
+		raw = "serviceAccountKey.json"
+	}
 	if !strings.HasPrefix(strings.TrimSpace(raw), "{") {
 		data, err := os.ReadFile(raw)
 		if err != nil {
-			return "", fmt.Errorf("baca service account: %w", err)
+			data, err = os.ReadFile("serviceAccountKey.json")
+			if err != nil {
+				return "", fmt.Errorf("file Firebase Service Account tidak ditemukan di '%s' maupun 'serviceAccountKey.json': %w", s.serviceAccount, err)
+			}
 		}
 		raw = string(data)
 	}
@@ -83,59 +94,87 @@ func (s *notificationService) getAccessToken() (string, error) {
 	}
 	tok, err := creds.TokenSource.Token()
 	if err != nil {
-		return "", fmt.Errorf("ambil token: %w", err)
+		return "", fmt.Errorf("ambil token OAuth: %w", err)
 	}
 	return tok.AccessToken, nil
 }
 
 func (s *notificationService) SendToUser(userID uint64, title, body string) error {
-	if s.serviceAccount == "" || s.projectID == "" {
-		return nil
+	if s.projectID == "" {
+		s.projectID = extractProjectID(s.serviceAccount)
+	}
+	if s.projectID == "" {
+		return fmt.Errorf("Firebase Project ID tidak ditemukan di serviceAccountKey.json")
 	}
 
 	tokens, err := s.tokenRepo.GetTokensByUserID(userID)
-	if err != nil || len(tokens) == 0 {
-		return nil
+	if err != nil {
+		return fmt.Errorf("gagal mengambil token perangkat user: %w", err)
+	}
+	if len(tokens) == 0 {
+		return fmt.Errorf("nasabah ini belum memiliki perangkat smartphone yang terhubung (FCM Token belum terdaftar)")
 	}
 
 	accessToken, err := s.getAccessToken()
 	if err != nil {
 		log.Printf("FCM access token error: %v", err)
-		return nil
+		return fmt.Errorf("gagal otentikasi Firebase FCM: %w", err)
 	}
 
+	var lastErr error
+	sentCount := 0
 	for _, token := range tokens {
 		if err := s.sendFCM(accessToken, token, title, body); err != nil {
-			log.Printf("FCM kirim gagal ke token %s: %v", token[:10], err)
+			log.Printf("FCM kirim gagal ke token %s: %v", token, err)
+			lastErr = err
+		} else {
+			sentCount++
 		}
+	}
+
+	if sentCount == 0 && lastErr != nil {
+		return fmt.Errorf("gagal mengirim ke FCM Google: %w", lastErr)
 	}
 	return nil
 }
 
 func (s *notificationService) SendToAll(title, body string) (int, error) {
-	if s.serviceAccount == "" || s.projectID == "" {
-		return 0, nil
+	if s.projectID == "" {
+		s.projectID = extractProjectID(s.serviceAccount)
+	}
+	if s.projectID == "" {
+		return 0, fmt.Errorf("Firebase Project ID tidak ditemukan di serviceAccountKey.json")
 	}
 
 	tokens, err := s.tokenRepo.GetAllTokens()
-	if err != nil || len(tokens) == 0 {
-		return 0, nil
+	if err != nil {
+		return 0, fmt.Errorf("gagal mengambil daftar token perangkat: %w", err)
+	}
+	if len(tokens) == 0 {
+		return 0, fmt.Errorf("belum ada smartphone nasabah yang terdaftar di sistem (FCM Token kosong). Pastikan aplikasi Flutter di HP sudah login")
 	}
 
 	accessToken, err := s.getAccessToken()
 	if err != nil {
 		log.Printf("FCM access token error: %v", err)
-		return 0, err
+		return 0, fmt.Errorf("gagal otentikasi Firebase FCM: %w", err)
 	}
 
 	sentCount := 0
+	var lastErr error
 	for _, token := range tokens {
 		if err := s.sendFCM(accessToken, token, title, body); err == nil {
 			sentCount++
 		} else {
 			log.Printf("FCM broadcast kirim gagal: %v", err)
+			lastErr = err
 		}
 	}
+
+	if sentCount == 0 && lastErr != nil {
+		return 0, fmt.Errorf("semua token gagal dikirim ke FCM: %w", lastErr)
+	}
+
 	return sentCount, nil
 }
 
