@@ -33,7 +33,9 @@ func (r *wasteTypeRepository) Update(wasteType *model.WasteType) error {
 }
 
 func (r *wasteTypeRepository) Delete(id uint64) error {
-	result := r.db.Delete(&model.WasteType{}, id)
+	result := r.db.Model(&model.WasteType{}).
+		Where("id = ?", id).
+		Update("is_active", false)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -45,7 +47,7 @@ func (r *wasteTypeRepository) Delete(id uint64) error {
 
 func (r *wasteTypeRepository) FindAll() ([]model.WasteType, error) {
 	var wasteTypes []model.WasteType
-	err := r.db.Order("id asc").Find(&wasteTypes).Error
+	err := r.db.Where("is_active = ?", true).Order("id asc").Find(&wasteTypes).Error
 	if err != nil {
 		return nil, err
 	}
