@@ -78,6 +78,17 @@ func InitDB(cfg *Config) (*gorm.DB, error) {
 		}
 	}
 
+	// Drop old triggers on waste_deposits if any
+	type TriggerRow struct {
+		TriggerName string `gorm:"column:TRIGGER_NAME"`
+	}
+	var triggers []TriggerRow
+	_ = db.Raw("SELECT TRIGGER_NAME FROM information_schema.TRIGGERS WHERE EVENT_OBJECT_SCHEMA = ? AND EVENT_OBJECT_TABLE = 'waste_deposits'", cfg.DBDatabase).Scan(&triggers).Error
+	for _, t := range triggers {
+		log.Printf("Dropping legacy trigger: %s", t.TriggerName)
+		_ = db.Exec(fmt.Sprintf("DROP TRIGGER IF EXISTS `%s`", t.TriggerName)).Error
+	}
+
 	if err := db.Model(&model.Reward{}).
 		Where("category IS NULL OR category = ''").
 		Update("category", "Voucher").Error; err != nil {
