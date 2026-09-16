@@ -60,12 +60,22 @@ func InitDB(cfg *Config) (*gorm.DB, error) {
 			WHERE id NOT IN (SELECT DISTINCT waste_deposit_id FROM waste_deposit_items WHERE waste_deposit_id IS NOT NULL)
 		`).Error
 
-		// Drop legacy columns from waste_deposits
-		log.Println("Dropping legacy columns from waste_deposits...")
-		_ = db.Migrator().DropColumn("waste_deposits", "waste_type_id")
-		_ = db.Migrator().DropColumn("waste_deposits", "weight_kg")
-		_ = db.Migrator().DropColumn("waste_deposits", "original_weight_kg")
-		_ = db.Migrator().DropColumn("waste_deposits", "actual_weight_kg")
+		// Drop foreign keys and indexes first so MySQL allows dropping waste_type_id column
+		log.Println("Dropping legacy foreign keys and columns from waste_deposits...")
+		_ = db.Exec("ALTER TABLE `waste_deposits` DROP FOREIGN KEY `fk_waste_deposits_waste_type`").Error
+		_ = db.Exec("ALTER TABLE `waste_deposits` DROP FOREIGN KEY `waste_deposits_waste_type_id_foreign`").Error
+		_ = db.Exec("ALTER TABLE `waste_deposits` DROP INDEX `fk_waste_deposits_waste_type`").Error
+		_ = db.Exec("ALTER TABLE `waste_deposits` DROP INDEX `waste_deposits_waste_type_id_foreign`").Error
+
+		_ = db.Exec("ALTER TABLE `waste_deposits` DROP COLUMN `waste_type_id`").Error
+		_ = db.Exec("ALTER TABLE `waste_deposits` DROP COLUMN `weight_kg`").Error
+		_ = db.Exec("ALTER TABLE `waste_deposits` DROP COLUMN `original_weight_kg`").Error
+		_ = db.Exec("ALTER TABLE `waste_deposits` DROP COLUMN `actual_weight_kg`").Error
+
+		// If column still exists for any reason, make it nullable
+		if db.Migrator().HasColumn("waste_deposits", "waste_type_id") {
+			_ = db.Exec("ALTER TABLE `waste_deposits` MODIFY COLUMN `waste_type_id` bigint unsigned NULL DEFAULT NULL").Error
+		}
 	}
 
 	if err := db.Model(&model.Reward{}).
