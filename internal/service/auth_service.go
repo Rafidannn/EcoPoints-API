@@ -70,13 +70,16 @@ func (s *authService) Register(req *dto.RegisterRequest) (*dto.UserResponse, err
 	}
 
 	return &dto.UserResponse{
-		ID:            user.ID,
-		Name:          user.Name,
-		Email:         user.Email,
-		Role:          user.Role,
-		PointsBalance: user.PointsBalance,
-		CreatedAt:     user.CreatedAt,
-		UpdatedAt:     user.UpdatedAt,
+		ID:             user.ID,
+		Name:           user.Name,
+		Email:          user.Email,
+		Role:           user.Role,
+		PointsBalance:  user.PointsBalance,
+		AssignmentArea: user.AssignmentArea,
+		Address:        user.Address,
+		WhatsappPhone:  user.WhatsappPhone,
+		CreatedAt:      user.CreatedAt,
+		UpdatedAt:      user.UpdatedAt,
 	}, nil
 }
 
@@ -106,13 +109,16 @@ func (s *authService) Login(req *dto.LoginRequest) (*dto.LoginResponse, error) {
 		TokenType: "Bearer",
 		ExpiresIn: expiresIn,
 		User: dto.UserResponse{
-			ID:            user.ID,
-			Name:          user.Name,
-			Email:         user.Email,
-			Role:          user.Role,
-			PointsBalance: user.PointsBalance,
-			CreatedAt:     user.CreatedAt,
-			UpdatedAt:     user.UpdatedAt,
+			ID:             user.ID,
+			Name:           user.Name,
+			Email:          user.Email,
+			Role:           user.Role,
+			PointsBalance:  user.PointsBalance,
+			AssignmentArea: user.AssignmentArea,
+			Address:        user.Address,
+			WhatsappPhone:  user.WhatsappPhone,
+			CreatedAt:      user.CreatedAt,
+			UpdatedAt:      user.UpdatedAt,
 		},
 	}, nil
 }
@@ -127,13 +133,16 @@ func (s *authService) GetProfile(userID uint64) (*dto.UserResponse, error) {
 	}
 
 	return &dto.UserResponse{
-		ID:            user.ID,
-		Name:          user.Name,
-		Email:         user.Email,
-		Role:          user.Role,
-		PointsBalance: user.PointsBalance,
-		CreatedAt:     user.CreatedAt,
-		UpdatedAt:     user.UpdatedAt,
+		ID:             user.ID,
+		Name:           user.Name,
+		Email:          user.Email,
+		Role:           user.Role,
+		PointsBalance:  user.PointsBalance,
+		AssignmentArea: user.AssignmentArea,
+		Address:        user.Address,
+		WhatsappPhone:  user.WhatsappPhone,
+		CreatedAt:      user.CreatedAt,
+		UpdatedAt:      user.UpdatedAt,
 	}, nil
 }
 
@@ -159,4 +168,3 @@ func (s *authService) ChangePassword(userID uint64, req *dto.ChangePasswordReque
 
 	return s.userRepo.UpdatePassword(userID, string(hashedPassword))
 }
-

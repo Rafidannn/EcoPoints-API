@@ -61,25 +61,27 @@ func (s *wasteDepositService) toResponse(d *model.WasteDeposit, earnedPoints *ui
 	estimatedPoints := uint(d.WeightKg * float64(pointsPerKg))
 
 	return dto.WasteDepositResponse{
-		ID:              d.ID,
-		Code:            code,
-		UserID:          d.UserID,
-		UserName:        userName,
-		WasteTypeID:     d.WasteTypeID,
-		WasteTypeName:   wasteTypeName,
-		PointsPerKg:     pointsPerKg,
-		DropPointID:     d.DropPointID,
-		DropPointName:   dropPointName,
-		WeightKg:        d.WeightKg,
-		EstimatedPoints: estimatedPoints,
-		EarnedPoints:    earnedPoints,
-		Status:          d.Status,
-		VerifiedBy:      d.VerifiedBy,
-		VerifierName:    verifierName,
-		VerifiedAt:      d.VerifiedAt,
-		Notes:           d.Notes,
-		Photo:           d.Photo,
-		CreatedAt:       d.CreatedAt,
+		ID:               d.ID,
+		Code:             code,
+		UserID:           d.UserID,
+		UserName:         userName,
+		WasteTypeID:      d.WasteTypeID,
+		WasteTypeName:    wasteTypeName,
+		PointsPerKg:      pointsPerKg,
+		DropPointID:      d.DropPointID,
+		DropPointName:    dropPointName,
+		WeightKg:         d.WeightKg,
+		OriginalWeightKg: d.OriginalWeightKg,
+		ActualWeightKg:   d.ActualWeightKg,
+		EstimatedPoints:  estimatedPoints,
+		EarnedPoints:     earnedPoints,
+		Status:           d.Status,
+		VerifiedBy:       d.VerifiedBy,
+		VerifierName:     verifierName,
+		VerifiedAt:       d.VerifiedAt,
+		Notes:            d.Notes,
+		Photo:            d.Photo,
+		CreatedAt:        d.CreatedAt,
 	}
 }
 
@@ -92,15 +94,16 @@ func (s *wasteDepositService) Create(userID uint64, req dto.CreateWasteDepositRe
 
 	now := time.Now()
 	deposit := model.WasteDeposit{
-		UserID:      userID,
-		DropPointID: req.DropPointID,
-		WasteTypeID: req.WasteTypeID,
-		WeightKg:    req.WeightKg,
-		Photo:       req.Photo,
-		Status:      "pending",
-		Notes:       req.Notes,
-		CreatedAt:   &now,
-		UpdatedAt:   &now,
+		UserID:           userID,
+		DropPointID:      req.DropPointID,
+		WasteTypeID:      req.WasteTypeID,
+		WeightKg:         req.WeightKg,
+		OriginalWeightKg: req.WeightKg,
+		Photo:            req.Photo,
+		Status:           "pending",
+		Notes:            req.Notes,
+		CreatedAt:        &now,
+		UpdatedAt:        &now,
 	}
 
 	if err := s.repo.Create(&deposit); err != nil {
@@ -121,7 +124,11 @@ func (s *wasteDepositService) GetByID(id uint64) (*dto.WasteDepositResponse, err
 	}
 	var earned *uint
 	if deposit.Status == "verified" && deposit.WasteType != nil {
-		p := uint(deposit.WeightKg * float64(deposit.WasteType.PointsPerKg))
+		weight := deposit.WeightKg
+		if deposit.ActualWeightKg != nil {
+			weight = *deposit.ActualWeightKg
+		}
+		p := uint(weight * float64(deposit.WasteType.PointsPerKg))
 		earned = &p
 	}
 	res := s.toResponse(deposit, earned)
@@ -137,7 +144,11 @@ func (s *wasteDepositService) GetMyDeposits(userID uint64) ([]dto.WasteDepositRe
 	for i, d := range deposits {
 		var earned *uint
 		if d.Status == "verified" && d.WasteType != nil {
-			p := uint(d.WeightKg * float64(d.WasteType.PointsPerKg))
+			weight := d.WeightKg
+			if d.ActualWeightKg != nil {
+				weight = *d.ActualWeightKg
+			}
+			p := uint(weight * float64(d.WasteType.PointsPerKg))
 			earned = &p
 		}
 		res[i] = s.toResponse(&d, earned)
@@ -154,7 +165,11 @@ func (s *wasteDepositService) GetAll(status string) ([]dto.WasteDepositResponse,
 	for i, d := range deposits {
 		var earned *uint
 		if d.Status == "verified" && d.WasteType != nil {
-			p := uint(d.WeightKg * float64(d.WasteType.PointsPerKg))
+			weight := d.WeightKg
+			if d.ActualWeightKg != nil {
+				weight = *d.ActualWeightKg
+			}
+			p := uint(weight * float64(d.WasteType.PointsPerKg))
 			earned = &p
 		}
 		res[i] = s.toResponse(&d, earned)

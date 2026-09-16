@@ -74,31 +74,33 @@ func (r *rewardRepository) Redeem(userID uint64, reward *model.Reward, notes *st
 	var redemption *model.RewardRedemption
 
 	err := r.db.Transaction(func(tx *gorm.DB) error {
-		// 1. Check stock
-		if reward.Stock <= 0 {
+		// 1. Reserve stock atomically to prevent overselling.
+		stockUpdate := tx.Model(&model.Reward{}).
+			Where("id = ? AND is_active = ? AND stock > 0", reward.ID, true).
+			UpdateColumn("stock", gorm.Expr("stock - 1"))
+		if stockUpdate.Error != nil {
+			return stockUpdate.Error
+		}
+		if stockUpdate.RowsAffected == 0 {
 			return errors.New("stok hadiah habis")
 		}
 
-		// 2. Check user points
+		// 2. Reserve user points atomically.
 		var user model.User
 		if err := tx.First(&user, userID).Error; err != nil {
 			return err
 		}
-		if int(user.PointsBalance) < int(reward.PointCost) {
+		pointsUpdate := tx.Model(&model.User{}).
+			Where("id = ? AND points_balance >= ?", userID, reward.PointCost).
+			UpdateColumn("points_balance", gorm.Expr("points_balance - ?", reward.PointCost))
+		if pointsUpdate.Error != nil {
+			return pointsUpdate.Error
+		}
+		if pointsUpdate.RowsAffected == 0 {
 			return errors.New("saldo poin tidak mencukupi")
 		}
 
-		// 3. Deduct points
-		if err := tx.Model(&user).Update("points_balance", user.PointsBalance-uint64(reward.PointCost)).Error; err != nil {
-			return err
-		}
-
-		// 4. Decrease stock
-		if err := tx.Model(reward).Update("stock", reward.Stock-1).Error; err != nil {
-			return err
-		}
-
-		// 5. Create redemption record
+		// 3. Create redemption record.
 		redemption = &model.RewardRedemption{
 			UserID:     userID,
 			RewardID:   reward.ID,
@@ -110,7 +112,7 @@ func (r *rewardRepository) Redeem(userID uint64, reward *model.Reward, notes *st
 			return err
 		}
 
-		// 6. Record the point debit for this user so frontend transaction history aligns with API contract
+		// 4. Record the point debit for this user so frontend transaction history aligns with API contract.
 		debitType := "debit"
 		refType := "reward_redemption"
 		refID := redemption.ID
@@ -171,10 +173,13 @@ func (r *rewardRepository) CompleteRedemption(id uint64, notes *string) (*model.
 		}
 
 		red.Status = "completed"
+		voucherCode := fmt.Sprintf("VCH-%06d", red.ID)
+		red.VoucherCode = &voucherCode
 		if notes != nil && *notes != "" {
 			red.Notes = notes
 		}
 		updates := map[string]interface{}{"status": red.Status}
+		updates["voucher_code"] = voucherCode
 		if notes != nil && *notes != "" {
 			updates["notes"] = red.Notes
 		}

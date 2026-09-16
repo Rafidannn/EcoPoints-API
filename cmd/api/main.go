@@ -125,6 +125,7 @@ func main() {
 
 	// Swagger documentation route
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	router.Static("/uploads", "uploads")
 
 	// API v1 Routes
 	v1 := router.Group("/api/v1")
@@ -198,6 +199,7 @@ func main() {
 			adminRewards.Use(middleware.AuthMiddleware(jwtService), middleware.RoleMiddleware("admin"))
 			{
 				adminRewards.POST("", rewardHandler.Create)
+				adminRewards.POST("/upload-image", rewardHandler.UploadImage)
 				adminRewards.PUT("/:id", rewardHandler.Update)
 				adminRewards.DELETE("/:id", rewardHandler.Delete)
 			}

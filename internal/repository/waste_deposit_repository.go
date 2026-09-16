@@ -3,6 +3,7 @@ package repository
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"ecopoints-go-api/internal/model"
@@ -86,13 +87,16 @@ func (r *wasteDepositRepository) Verify(depositID uint64, verifierID uint64, act
 			return fmt.Errorf("setoran tidak ditemukan: %w", err)
 		}
 
-		if deposit.Status == "verified" {
-			return errors.New("setoran ini sudah diverifikasi sebelumnya")
+		if deposit.Status != "pending" {
+			return errors.New("hanya setoran berstatus pending yang bisa diverifikasi")
 		}
 
 		// 2. Compute points based on weight and waste type
 		if actualWeight <= 0 {
-			actualWeight = deposit.WeightKg
+			actualWeight = deposit.OriginalWeightKg
+			if actualWeight <= 0 {
+				actualWeight = deposit.WeightKg
+			}
 		}
 		pointsPerKg := uint(0)
 		if deposit.WasteType != nil {
@@ -101,6 +105,7 @@ func (r *wasteDepositRepository) Verify(depositID uint64, verifierID uint64, act
 		earnedPoints = uint(actualWeight * float64(pointsPerKg))
 
 		now := time.Now()
+		deposit.ActualWeightKg = &actualWeight
 		deposit.WeightKg = actualWeight
 		deposit.Status = "verified"
 		deposit.VerifiedBy = &verifierID
@@ -169,14 +174,15 @@ func (r *wasteDepositRepository) Reject(depositID uint64, actorID uint64, notes 
 		if deposit.Status != "pending" {
 			return errors.New("hanya setoran berstatus pending yang bisa ditolak")
 		}
+		if notes == nil || strings.TrimSpace(*notes) == "" {
+			return errors.New("alasan penolakan wajib diisi")
+		}
 
 		now := time.Now()
 		deposit.Status = "rejected"
 		deposit.VerifiedBy = &actorID
 		deposit.VerifiedAt = &now
-		if notes != nil && *notes != "" {
-			deposit.Notes = notes
-		}
+		deposit.Notes = notes
 
 		if err := tx.Save(&deposit).Error; err != nil {
 			return fmt.Errorf("gagal memperbarui setoran: %w", err)

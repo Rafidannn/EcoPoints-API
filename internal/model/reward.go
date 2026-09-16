@@ -5,6 +5,7 @@ import "time"
 type Reward struct {
 	ID          uint64     `gorm:"column:id;primaryKey;autoIncrement" json:"id"`
 	Name        string     `gorm:"column:name;not null" json:"name"`
+	Category    string     `gorm:"column:category;type:varchar(50);not null;default:Voucher" json:"category"`
 	Description *string    `gorm:"column:description;type:text" json:"description,omitempty"`
 	PointCost   uint       `gorm:"column:point_cost;not null" json:"point_cost"`
 	Stock       int        `gorm:"column:stock;default:0;not null" json:"stock"`

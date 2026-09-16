@@ -5,6 +5,8 @@ import (
 	"log"
 	"time"
 
+	"ecopoints-go-api/internal/model"
+
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -44,5 +46,18 @@ func InitDB(cfg *Config) (*gorm.DB, error) {
 	sqlDB.SetConnMaxLifetime(30 * time.Minute)
 
 	log.Println("Database connection to Laravel MySQL database successfully established!")
+	if err := db.AutoMigrate(&model.User{}, &model.WasteDeposit{}, &model.Reward{}, &model.RewardRedemption{}); err != nil {
+		return nil, fmt.Errorf("failed to update application schema: %w", err)
+	}
+	if err := db.Model(&model.WasteDeposit{}).
+		Where("original_weight_kg = 0").
+		UpdateColumn("original_weight_kg", gorm.Expr("weight_kg")).Error; err != nil {
+		return nil, fmt.Errorf("failed to backfill original deposit weights: %w", err)
+	}
+	if err := db.Model(&model.Reward{}).
+		Where("category IS NULL OR category = ''").
+		Update("category", "Voucher").Error; err != nil {
+		return nil, fmt.Errorf("failed to backfill reward categories: %w", err)
+	}
 	return db, nil
 }

@@ -54,7 +54,7 @@ func (h *AdminUserHandler) Create(c *gin.Context) {
 		return
 	}
 	now := time.Now()
-	user := &model.User{Name: req.Name, Email: req.Email, Password: string(hashed), Role: req.Role, CreatedAt: &now, UpdatedAt: &now}
+	user := &model.User{Name: req.Name, Email: req.Email, Password: string(hashed), Role: req.Role, AssignmentArea: req.AssignmentArea, Address: req.Address, WhatsappPhone: req.WhatsappPhone, CreatedAt: &now, UpdatedAt: &now}
 	if err := h.userRepo.Create(user); err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse("Gagal membuat akun", nil))
 		return
@@ -79,6 +79,7 @@ func (h *AdminUserHandler) Update(c *gin.Context) {
 		return
 	}
 	user.Name, user.Email, user.Role, user.PointsBalance = req.Name, req.Email, req.Role, req.PointsBalance
+	user.AssignmentArea, user.Address, user.WhatsappPhone = req.AssignmentArea, req.Address, req.WhatsappPhone
 	if req.Password != nil && strings.TrimSpace(*req.Password) != "" {
 		hashed, hashErr := bcrypt.GenerateFromPassword([]byte(*req.Password), bcrypt.DefaultCost)
 		if hashErr != nil {
@@ -119,5 +120,5 @@ func parseID(value string) (uint64, error) {
 }
 
 func adminUserResponse(user *model.User) dto.UserResponse {
-	return dto.UserResponse{ID: user.ID, Name: user.Name, Email: user.Email, Role: user.Role, PointsBalance: user.PointsBalance, CreatedAt: user.CreatedAt, UpdatedAt: user.UpdatedAt}
+	return dto.UserResponse{ID: user.ID, Name: user.Name, Email: user.Email, Role: user.Role, PointsBalance: user.PointsBalance, AssignmentArea: user.AssignmentArea, Address: user.Address, WhatsappPhone: user.WhatsappPhone, CreatedAt: user.CreatedAt, UpdatedAt: user.UpdatedAt}
 }

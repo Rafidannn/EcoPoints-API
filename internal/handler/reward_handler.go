@@ -2,8 +2,13 @@ package handler
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
+	"time"
 
 	"ecopoints-go-api/internal/dto"
 	"ecopoints-go-api/internal/service"
@@ -19,6 +24,41 @@ func NewRewardHandler(rewardService service.RewardService) *RewardHandler {
 	return &RewardHandler{
 		rewardService: rewardService,
 	}
+}
+
+func (h *RewardHandler) UploadImage(c *gin.Context) {
+	file, err := c.FormFile("image")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse("Image file is required", gin.H{"image": "Choose an image file"}))
+		return
+	}
+	if file.Size > 5*1024*1024 {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse("Image is too large", gin.H{"image": "Maximum file size is 5 MB"}))
+		return
+	}
+
+	extension := strings.ToLower(filepath.Ext(file.Filename))
+	allowed := map[string]bool{".jpg": true, ".jpeg": true, ".png": true, ".webp": true}
+	if !allowed[extension] {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse("Unsupported image type", gin.H{"image": "Use JPG, PNG, or WebP"}))
+		return
+	}
+
+	directory := filepath.Join("uploads", "rewards")
+	if err := os.MkdirAll(directory, 0755); err != nil {
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse("Failed to prepare image storage", nil))
+		return
+	}
+	filename := fmt.Sprintf("%d%s", time.Now().UnixNano(), extension)
+	path := filepath.Join(directory, filename)
+	if err := c.SaveUploadedFile(file, path); err != nil {
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse("Failed to save image", nil))
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponse("Reward image uploaded successfully", gin.H{
+		"image": "/uploads/rewards/" + filename,
+	}))
 }
 
 // GetAll godoc

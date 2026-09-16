@@ -77,6 +77,7 @@ func (s *rewardService) CreateReward(req *dto.CreateRewardRequest) (*dto.RewardR
 
 	reward := &model.Reward{
 		Name:        req.Name,
+		Category:    req.Category,
 		Description: req.Description,
 		PointCost:   req.PointCost,
 		Stock:       req.Stock,
@@ -105,6 +106,9 @@ func (s *rewardService) UpdateReward(id uint64, req *dto.UpdateRewardRequest) (*
 
 	if req.Name != nil {
 		reward.Name = *req.Name
+	}
+	if req.Category != nil {
+		reward.Category = *req.Category
 	}
 	if req.Description != nil {
 		reward.Description = req.Description
@@ -149,6 +153,7 @@ func toRewardResponse(rew *model.Reward) dto.RewardResponse {
 	return dto.RewardResponse{
 		ID:          rew.ID,
 		Name:        rew.Name,
+		Category:    rew.Category,
 		Description: rew.Description,
 		PointCost:   rew.PointCost,
 		Stock:       rew.Stock,
@@ -178,15 +183,16 @@ func (s *rewardService) RedeemReward(userID uint64, rewardID uint64, notes *stri
 
 	rewardName := reward.Name
 	res := &dto.RedemptionResponse{
-		ID:         redemption.ID,
-		UserID:     redemption.UserID,
-		UserName:   "",
-		RewardID:   redemption.RewardID,
-		RewardName: rewardName,
-		PointsUsed: redemption.PointsUsed,
-		Status:     redemption.Status,
-		Notes:      redemption.Notes,
-		CreatedAt:  redemption.CreatedAt,
+		ID:          redemption.ID,
+		UserID:      redemption.UserID,
+		UserName:    "",
+		RewardID:    redemption.RewardID,
+		RewardName:  rewardName,
+		PointsUsed:  redemption.PointsUsed,
+		Status:      redemption.Status,
+		Notes:       redemption.Notes,
+		VoucherCode: redemption.VoucherCode,
+		CreatedAt:   redemption.CreatedAt,
 	}
 	return res, nil
 }
@@ -209,7 +215,7 @@ func toRedemptionResponse(r *model.RewardRedemption) dto.RedemptionResponse {
 		PointsUsed:  r.PointsUsed,
 		Status:      r.Status,
 		Notes:       r.Notes,
-		VoucherCode: nil,
+		VoucherCode: r.VoucherCode,
 		CreatedAt:   r.CreatedAt,
 	}
 }

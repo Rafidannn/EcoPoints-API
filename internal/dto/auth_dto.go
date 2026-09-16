@@ -14,13 +14,16 @@ type LoginRequest struct {
 }
 
 type UserResponse struct {
-	ID            uint64     `json:"id" example:"1"`
-	Name          string     `json:"name" example:"John Doe"`
-	Email         string     `json:"email" example:"johndoe@example.com"`
-	Role          string     `json:"role" example:"user"`
-	PointsBalance uint64     `json:"points_balance" example:"1500"`
-	CreatedAt     *time.Time `json:"created_at"`
-	UpdatedAt     *time.Time `json:"updated_at"`
+	ID             uint64     `json:"id" example:"1"`
+	Name           string     `json:"name" example:"John Doe"`
+	Email          string     `json:"email" example:"johndoe@example.com"`
+	Role           string     `json:"role" example:"user"`
+	PointsBalance  uint64     `json:"points_balance" example:"1500"`
+	AssignmentArea *string    `json:"assignment_area,omitempty"`
+	Address        *string    `json:"address,omitempty"`
+	WhatsappPhone  *string    `json:"whatsapp_phone,omitempty"`
+	CreatedAt      *time.Time `json:"created_at"`
+	UpdatedAt      *time.Time `json:"updated_at"`
 }
 
 type LoginResponse struct {
@@ -36,16 +39,22 @@ type ChangePasswordRequest struct {
 }
 
 type AdminCreateUserRequest struct {
-	Name     string `json:"name" binding:"required,min=2,max=255"`
-	Email    string `json:"email" binding:"required,email,max=255"`
-	Password string `json:"password" binding:"required,min=8"`
-	Role     string `json:"role" binding:"required,oneof=user petugas admin"`
+	Name           string  `json:"name" binding:"required,min=2,max=255"`
+	Email          string  `json:"email" binding:"required,email,max=255"`
+	Password       string  `json:"password" binding:"required,min=8"`
+	Role           string  `json:"role" binding:"required,oneof=user petugas admin"`
+	AssignmentArea *string `json:"assignment_area"`
+	Address        *string `json:"address"`
+	WhatsappPhone  *string `json:"whatsapp_phone"`
 }
 
 type AdminUpdateUserRequest struct {
-	Name          string  `json:"name" binding:"required,min=2,max=255"`
-	Email         string  `json:"email" binding:"required,email,max=255"`
-	Password      *string `json:"password"`
-	Role          string  `json:"role" binding:"required,oneof=user petugas admin"`
-	PointsBalance uint64  `json:"points_balance"`
+	Name           string  `json:"name" binding:"required,min=2,max=255"`
+	Email          string  `json:"email" binding:"required,email,max=255"`
+	Password       *string `json:"password"`
+	Role           string  `json:"role" binding:"required,oneof=user petugas admin"`
+	PointsBalance  uint64  `json:"points_balance"`
+	AssignmentArea *string `json:"assignment_area"`
+	Address        *string `json:"address"`
+	WhatsappPhone  *string `json:"whatsapp_phone"`
 }

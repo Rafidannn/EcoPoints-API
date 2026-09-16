@@ -3,6 +3,7 @@ package handler
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"ecopoints-go-api/internal/dto"
 	"ecopoints-go-api/internal/service"
@@ -188,7 +189,14 @@ func (h *WasteDepositHandler) Reject(c *gin.Context) {
 	actorID := actorIDVal.(uint64)
 
 	var req dto.VerifyWasteDepositRequest
-	_ = c.ShouldBindJSON(&req) // optional body
+	if err := c.ShouldBindJSON(&req); err != nil && err.Error() != "EOF" {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse("Payload tidak valid", nil))
+		return
+	}
+	if req.Notes == nil || strings.TrimSpace(*req.Notes) == "" {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse("Alasan penolakan wajib diisi", nil))
+		return
+	}
 
 	res, err := h.wasteDepositService.Reject(id, actorID, req)
 	if err != nil {

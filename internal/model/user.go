@@ -9,6 +9,9 @@ type User struct {
 	EmailVerifiedAt *time.Time `gorm:"column:email_verified_at" json:"email_verified_at,omitempty"`
 	Password        string     `gorm:"column:password;not null" json:"-"`
 	Role            string     `gorm:"column:role;default:user;not null" json:"role"`
+	AssignmentArea  *string    `gorm:"column:assignment_area" json:"assignment_area,omitempty"`
+	Address         *string    `gorm:"column:address" json:"address,omitempty"`
+	WhatsappPhone   *string    `gorm:"column:whatsapp_phone" json:"whatsapp_phone,omitempty"`
 	PointsBalance   uint64     `gorm:"column:points_balance;default:0;not null" json:"points_balance"`
 	RememberToken   *string    `gorm:"column:remember_token" json:"-"`
 	CreatedAt       *time.Time `gorm:"column:created_at" json:"created_at"`
