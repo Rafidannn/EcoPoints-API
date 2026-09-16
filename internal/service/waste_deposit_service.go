@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -41,13 +42,6 @@ func (s *wasteDepositService) toResponse(d *model.WasteDeposit, earnedPoints *ui
 		userName = d.User.Name
 	}
 
-	wasteTypeName := ""
-	pointsPerKg := uint(0)
-	if d.WasteType != nil {
-		wasteTypeName = d.WasteType.Name
-		pointsPerKg = d.WasteType.PointsPerKg
-	}
-
 	var dropPointName *string
 	if d.DropPoint != nil {
 		dropPointName = &d.DropPoint.Name
@@ -58,60 +52,121 @@ func (s *wasteDepositService) toResponse(d *model.WasteDeposit, earnedPoints *ui
 		verifierName = &d.Verifier.Name
 	}
 
-	estimatedPoints := uint(d.WeightKg * float64(pointsPerKg))
+	var totalWeight float64
+	var totalEstimatedPoints uint
+	var calculatedEarnedPoints uint
+
+	itemsResponse := make([]dto.WasteDepositItemResponse, len(d.Items))
+	for i, item := range d.Items {
+		wasteTypeName := ""
+		pointsPerKg := uint(0)
+		if item.WasteType != nil {
+			wasteTypeName = item.WasteType.Name
+			pointsPerKg = item.WasteType.PointsPerKg
+		}
+
+		origWeight := item.OriginalWeightKg
+		if origWeight <= 0 {
+			origWeight = item.WeightKg
+		}
+
+		itemWeight := item.WeightKg
+		if item.ActualWeightKg != nil && *item.ActualWeightKg > 0 {
+			itemWeight = *item.ActualWeightKg
+		}
+
+		estPoints := uint(origWeight * float64(pointsPerKg))
+		totalEstimatedPoints += estPoints
+		totalWeight += itemWeight
+
+		var itemEarned *uint
+		if d.Status == "verified" {
+			ep := uint(itemWeight * float64(pointsPerKg))
+			itemEarned = &ep
+			calculatedEarnedPoints += ep
+		}
+
+		itemsResponse[i] = dto.WasteDepositItemResponse{
+			ID:               item.ID,
+			WasteTypeID:      item.WasteTypeID,
+			WasteTypeName:    wasteTypeName,
+			PointsPerKg:      pointsPerKg,
+			WeightKg:         itemWeight,
+			OriginalWeightKg: origWeight,
+			ActualWeightKg:   item.ActualWeightKg,
+			EstimatedPoints:  estPoints,
+			EarnedPoints:     itemEarned,
+		}
+	}
+
+	var finalEarnedPoints *uint
+	if earnedPoints != nil {
+		finalEarnedPoints = earnedPoints
+	} else if d.Status == "verified" {
+		finalEarnedPoints = &calculatedEarnedPoints
+	}
 
 	return dto.WasteDepositResponse{
-		ID:               d.ID,
-		Code:             code,
-		UserID:           d.UserID,
-		UserName:         userName,
-		WasteTypeID:      d.WasteTypeID,
-		WasteTypeName:    wasteTypeName,
-		PointsPerKg:      pointsPerKg,
-		DropPointID:      d.DropPointID,
-		DropPointName:    dropPointName,
-		WeightKg:         d.WeightKg,
-		OriginalWeightKg: d.OriginalWeightKg,
-		ActualWeightKg:   d.ActualWeightKg,
-		EstimatedPoints:  estimatedPoints,
-		EarnedPoints:     earnedPoints,
-		Status:           d.Status,
-		VerifiedBy:       d.VerifiedBy,
-		VerifierName:     verifierName,
-		VerifiedAt:       d.VerifiedAt,
-		Notes:            d.Notes,
-		Photo:            d.Photo,
-		CreatedAt:        d.CreatedAt,
+		ID:              d.ID,
+		Code:            code,
+		UserID:          d.UserID,
+		UserName:        userName,
+		Items:           itemsResponse,
+		TotalWeightKg:   totalWeight,
+		EstimatedPoints: totalEstimatedPoints,
+		EarnedPoints:    finalEarnedPoints,
+		DropPointID:     d.DropPointID,
+		DropPointName:   dropPointName,
+		Status:          d.Status,
+		VerifiedBy:      d.VerifiedBy,
+		VerifierName:    verifierName,
+		VerifiedAt:      d.VerifiedAt,
+		Notes:           d.Notes,
+		Photo:           d.Photo,
+		CreatedAt:       d.CreatedAt,
 	}
 }
 
 func (s *wasteDepositService) Create(userID uint64, req dto.CreateWasteDepositRequest) (*dto.WasteDepositResponse, error) {
-	// 1. Check waste type exists
-	wasteType, err := s.wasteTypeRepo.FindByID(req.WasteTypeID)
-	if err != nil {
-		return nil, fmt.Errorf("jenis sampah tidak valid: %w", err)
+	if len(req.Items) == 0 {
+		return nil, errors.New("minimal harus ada 1 jenis sampah yang disetor")
 	}
 
 	now := time.Now()
 	deposit := model.WasteDeposit{
-		UserID:           userID,
-		DropPointID:      req.DropPointID,
-		WasteTypeID:      req.WasteTypeID,
-		WeightKg:         req.WeightKg,
-		OriginalWeightKg: req.WeightKg,
-		Photo:            req.Photo,
-		Status:           "pending",
-		Notes:            req.Notes,
-		CreatedAt:        &now,
-		UpdatedAt:        &now,
+		UserID:      userID,
+		DropPointID: req.DropPointID,
+		Photo:       req.Photo,
+		Status:      "pending",
+		Notes:       req.Notes,
+		CreatedAt:   &now,
+		UpdatedAt:   &now,
+		Items:       make([]model.WasteDepositItem, len(req.Items)),
+	}
+
+	for i, itemReq := range req.Items {
+		if itemReq.WeightKg <= 0 {
+			return nil, fmt.Errorf("berat sampah harus lebih dari 0 kg")
+		}
+
+		wasteType, err := s.wasteTypeRepo.FindByID(itemReq.WasteTypeID)
+		if err != nil {
+			return nil, fmt.Errorf("jenis sampah ID %d tidak valid: %w", itemReq.WasteTypeID, err)
+		}
+
+		deposit.Items[i] = model.WasteDepositItem{
+			WasteTypeID:      itemReq.WasteTypeID,
+			WeightKg:         itemReq.WeightKg,
+			OriginalWeightKg: itemReq.WeightKg,
+			CreatedAt:        &now,
+			UpdatedAt:        &now,
+			WasteType:        wasteType,
+		}
 	}
 
 	if err := s.repo.Create(&deposit); err != nil {
 		return nil, fmt.Errorf("gagal membuat setoran sampah: %w", err)
 	}
-
-	// Attach preloaded waste type for DTO formatting
-	deposit.WasteType = wasteType
 
 	res := s.toResponse(&deposit, nil)
 	return &res, nil
@@ -122,16 +177,7 @@ func (s *wasteDepositService) GetByID(id uint64) (*dto.WasteDepositResponse, err
 	if err != nil {
 		return nil, fmt.Errorf("setoran tidak ditemukan: %w", err)
 	}
-	var earned *uint
-	if deposit.Status == "verified" && deposit.WasteType != nil {
-		weight := deposit.WeightKg
-		if deposit.ActualWeightKg != nil {
-			weight = *deposit.ActualWeightKg
-		}
-		p := uint(weight * float64(deposit.WasteType.PointsPerKg))
-		earned = &p
-	}
-	res := s.toResponse(deposit, earned)
+	res := s.toResponse(deposit, nil)
 	return &res, nil
 }
 
@@ -141,17 +187,8 @@ func (s *wasteDepositService) GetMyDeposits(userID uint64) ([]dto.WasteDepositRe
 		return nil, err
 	}
 	res := make([]dto.WasteDepositResponse, len(deposits))
-	for i, d := range deposits {
-		var earned *uint
-		if d.Status == "verified" && d.WasteType != nil {
-			weight := d.WeightKg
-			if d.ActualWeightKg != nil {
-				weight = *d.ActualWeightKg
-			}
-			p := uint(weight * float64(d.WasteType.PointsPerKg))
-			earned = &p
-		}
-		res[i] = s.toResponse(&d, earned)
+	for i := range deposits {
+		res[i] = s.toResponse(&deposits[i], nil)
 	}
 	return res, nil
 }
@@ -162,28 +199,21 @@ func (s *wasteDepositService) GetAll(status string) ([]dto.WasteDepositResponse,
 		return nil, err
 	}
 	res := make([]dto.WasteDepositResponse, len(deposits))
-	for i, d := range deposits {
-		var earned *uint
-		if d.Status == "verified" && d.WasteType != nil {
-			weight := d.WeightKg
-			if d.ActualWeightKg != nil {
-				weight = *d.ActualWeightKg
-			}
-			p := uint(weight * float64(d.WasteType.PointsPerKg))
-			earned = &p
-		}
-		res[i] = s.toResponse(&d, earned)
+	for i := range deposits {
+		res[i] = s.toResponse(&deposits[i], nil)
 	}
 	return res, nil
 }
 
 func (s *wasteDepositService) Verify(depositID uint64, verifierID uint64, req dto.VerifyWasteDepositRequest) (*dto.WasteDepositResponse, error) {
-	actualWeight := 0.0
-	if req.WeightKg != nil && *req.WeightKg > 0 {
-		actualWeight = *req.WeightKg
+	itemWeights := make(map[uint64]float64)
+	for _, item := range req.Items {
+		if item.WeightKg != nil && *item.WeightKg > 0 {
+			itemWeights[item.ItemID] = *item.WeightKg
+		}
 	}
 
-	updated, earnedPoints, err := s.repo.Verify(depositID, verifierID, actualWeight, req.Notes)
+	updated, earnedPoints, err := s.repo.Verify(depositID, verifierID, itemWeights, req.Notes)
 	if err != nil {
 		return nil, err
 	}
@@ -223,3 +253,4 @@ func (s *wasteDepositService) Cancel(depositID uint64, userID uint64, req dto.Ve
 	res := s.toResponse(updated, nil)
 	return &res, nil
 }
+

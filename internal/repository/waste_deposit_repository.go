@@ -16,7 +16,7 @@ type WasteDepositRepository interface {
 	GetByID(id uint64) (*model.WasteDeposit, error)
 	GetByUserID(userID uint64) ([]model.WasteDeposit, error)
 	GetAll(status string) ([]model.WasteDeposit, error)
-	Verify(depositID uint64, verifierID uint64, actualWeight float64, notes *string) (*model.WasteDeposit, uint, error)
+	Verify(depositID uint64, verifierID uint64, itemWeights map[uint64]float64, notes *string) (*model.WasteDeposit, uint, error)
 	Reject(depositID uint64, actorID uint64, notes *string) (*model.WasteDeposit, error)
 	Cancel(depositID uint64, userID uint64, notes *string) (*model.WasteDeposit, error)
 }
@@ -37,9 +37,9 @@ func (r *wasteDepositRepository) GetByID(id uint64) (*model.WasteDeposit, error)
 	var deposit model.WasteDeposit
 	err := r.db.
 		Preload("User").
-		Preload("WasteType").
 		Preload("DropPoint").
 		Preload("Verifier").
+		Preload("Items.WasteType").
 		First(&deposit, id).Error
 	if err != nil {
 		return nil, err
@@ -50,9 +50,9 @@ func (r *wasteDepositRepository) GetByID(id uint64) (*model.WasteDeposit, error)
 func (r *wasteDepositRepository) GetByUserID(userID uint64) ([]model.WasteDeposit, error) {
 	var deposits []model.WasteDeposit
 	err := r.db.
-		Preload("WasteType").
 		Preload("DropPoint").
 		Preload("Verifier").
+		Preload("Items.WasteType").
 		Where("user_id = ?", userID).
 		Order("created_at DESC").
 		Find(&deposits).Error
@@ -63,9 +63,9 @@ func (r *wasteDepositRepository) GetAll(status string) ([]model.WasteDeposit, er
 	var deposits []model.WasteDeposit
 	query := r.db.
 		Preload("User").
-		Preload("WasteType").
 		Preload("DropPoint").
 		Preload("Verifier").
+		Preload("Items.WasteType").
 		Order("created_at DESC")
 
 	if status != "" {
@@ -76,14 +76,14 @@ func (r *wasteDepositRepository) GetAll(status string) ([]model.WasteDeposit, er
 	return deposits, err
 }
 
-// Verify verifies a deposit, computes earned points, updates the user balance, and inserts a point_transaction
-func (r *wasteDepositRepository) Verify(depositID uint64, verifierID uint64, actualWeight float64, notes *string) (*model.WasteDeposit, uint, error) {
+// Verify verifies a deposit, computes earned points for each item, updates user balance, and inserts point_transaction
+func (r *wasteDepositRepository) Verify(depositID uint64, verifierID uint64, itemWeights map[uint64]float64, notes *string) (*model.WasteDeposit, uint, error) {
 	var deposit model.WasteDeposit
 	var earnedPoints uint
 
 	err := r.db.Transaction(func(tx *gorm.DB) error {
 		// 1. Fetch deposit with lock
-		if err := tx.Preload("WasteType").Preload("User").First(&deposit, depositID).Error; err != nil {
+		if err := tx.Preload("Items.WasteType").Preload("User").First(&deposit, depositID).Error; err != nil {
 			return fmt.Errorf("setoran tidak ditemukan: %w", err)
 		}
 
@@ -91,22 +91,36 @@ func (r *wasteDepositRepository) Verify(depositID uint64, verifierID uint64, act
 			return errors.New("hanya setoran berstatus pending yang bisa diverifikasi")
 		}
 
-		// 2. Compute points based on weight and waste type
-		if actualWeight <= 0 {
-			actualWeight = deposit.OriginalWeightKg
+		// 2. Compute points based on weight and waste type per item
+		totalActualWeight := 0.0
+		earnedPoints = 0
+		now := time.Now()
+
+		for i := range deposit.Items {
+			item := &deposit.Items[i]
+			actualWeight := item.OriginalWeightKg
 			if actualWeight <= 0 {
-				actualWeight = deposit.WeightKg
+				actualWeight = item.WeightKg
+			}
+			if w, ok := itemWeights[item.ID]; ok && w > 0 {
+				actualWeight = w
+			}
+
+			pointsPerKg := uint(0)
+			if item.WasteType != nil {
+				pointsPerKg = item.WasteType.PointsPerKg
+			}
+
+			earnedPoints += uint(actualWeight * float64(pointsPerKg))
+			totalActualWeight += actualWeight
+
+			item.ActualWeightKg = &actualWeight
+			item.WeightKg = actualWeight
+			if err := tx.Save(item).Error; err != nil {
+				return fmt.Errorf("gagal memperbarui item setoran: %w", err)
 			}
 		}
-		pointsPerKg := uint(0)
-		if deposit.WasteType != nil {
-			pointsPerKg = deposit.WasteType.PointsPerKg
-		}
-		earnedPoints = uint(actualWeight * float64(pointsPerKg))
 
-		now := time.Now()
-		deposit.ActualWeightKg = &actualWeight
-		deposit.WeightKg = actualWeight
 		deposit.Status = "verified"
 		deposit.VerifiedBy = &verifierID
 		deposit.VerifiedAt = &now
@@ -130,7 +144,10 @@ func (r *wasteDepositRepository) Verify(depositID uint64, verifierID uint64, act
 		}
 
 		// 5. Create point_transactions record
-		desc := fmt.Sprintf("Setor %s (%.1f kg)", deposit.WasteType.Name, actualWeight)
+		desc := fmt.Sprintf("Setor %d jenis sampah (%.1f kg)", len(deposit.Items), totalActualWeight)
+		if len(deposit.Items) == 1 && deposit.Items[0].WasteType != nil {
+			desc = fmt.Sprintf("Setor %s (%.1f kg)", deposit.Items[0].WasteType.Name, totalActualWeight)
+		}
 		refType := "waste_deposit"
 		refID := deposit.ID
 		pt := model.PointTransaction{
@@ -242,3 +259,4 @@ func (r *wasteDepositRepository) Cancel(depositID uint64, userID uint64, notes *
 	}
 	return &deposit, nil
 }
+

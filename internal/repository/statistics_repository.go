@@ -20,7 +20,11 @@ func NewStatisticsRepository(db *gorm.DB) StatisticsRepository {
 
 func (r *statisticsRepository) GetPublicStatistics() (*dto.PublicStatisticsResponse, error) {
 	var result dto.PublicStatisticsResponse
-	if err := r.db.Table("waste_deposits").Where("status = ?", "verified").Select("COALESCE(SUM(weight_kg), 0)").Scan(&result.TotalWeightKg).Error; err != nil {
+	if err := r.db.Table("waste_deposit_items wdi").
+		Joins("INNER JOIN waste_deposits wd ON wd.id = wdi.waste_deposit_id").
+		Where("wd.status = ?", "verified").
+		Select("COALESCE(SUM(wdi.weight_kg), 0)").
+		Scan(&result.TotalWeightKg).Error; err != nil {
 		return nil, err
 	}
 	if err := r.db.Table("point_transactions").Where("type IN (?, ?)", "credit", "earned").Select("COALESCE(SUM(amount), 0)").Scan(&result.TotalPointsIssued).Error; err != nil {
@@ -31,3 +35,4 @@ func (r *statisticsRepository) GetPublicStatistics() (*dto.PublicStatisticsRespo
 	}
 	return &result, nil
 }
+

@@ -46,14 +46,28 @@ func InitDB(cfg *Config) (*gorm.DB, error) {
 	sqlDB.SetConnMaxLifetime(30 * time.Minute)
 
 	log.Println("Database connection to Laravel MySQL database successfully established!")
-	if err := db.AutoMigrate(&model.User{}, &model.WasteDeposit{}, &model.Reward{}, &model.RewardRedemption{}); err != nil {
+	if err := db.AutoMigrate(&model.User{}, &model.WasteDeposit{}, &model.WasteDepositItem{}, &model.Reward{}, &model.RewardRedemption{}); err != nil {
 		return nil, fmt.Errorf("failed to update application schema: %w", err)
 	}
-	if err := db.Model(&model.WasteDeposit{}).
-		Where("original_weight_kg = 0").
-		UpdateColumn("original_weight_kg", gorm.Expr("weight_kg")).Error; err != nil {
-		return nil, fmt.Errorf("failed to backfill original deposit weights: %w", err)
+
+	// Backfill existing waste_deposits to waste_deposit_items if old columns exist
+	if db.Migrator().HasColumn("waste_deposits", "waste_type_id") {
+		log.Println("Migrating legacy single-item waste_deposits into waste_deposit_items...")
+		_ = db.Exec(`
+			INSERT INTO waste_deposit_items (waste_deposit_id, waste_type_id, weight_kg, original_weight_kg, actual_weight_kg, created_at, updated_at)
+			SELECT id, waste_type_id, weight_kg, original_weight_kg, actual_weight_kg, created_at, updated_at
+			FROM waste_deposits
+			WHERE id NOT IN (SELECT DISTINCT waste_deposit_id FROM waste_deposit_items WHERE waste_deposit_id IS NOT NULL)
+		`).Error
+
+		// Drop legacy columns from waste_deposits
+		log.Println("Dropping legacy columns from waste_deposits...")
+		_ = db.Migrator().DropColumn("waste_deposits", "waste_type_id")
+		_ = db.Migrator().DropColumn("waste_deposits", "weight_kg")
+		_ = db.Migrator().DropColumn("waste_deposits", "original_weight_kg")
+		_ = db.Migrator().DropColumn("waste_deposits", "actual_weight_kg")
 	}
+
 	if err := db.Model(&model.Reward{}).
 		Where("category IS NULL OR category = ''").
 		Update("category", "Voucher").Error; err != nil {
@@ -61,3 +75,4 @@ func InitDB(cfg *Config) (*gorm.DB, error) {
 	}
 	return db, nil
 }
+

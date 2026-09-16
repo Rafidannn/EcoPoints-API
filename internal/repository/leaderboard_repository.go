@@ -34,10 +34,12 @@ func (r *leaderboardRepository) GetAllTime(limit int) ([]dto.LeaderboardEntry, e
 			u.id          AS user_id,
 			u.name        AS name,
 			u.points_balance AS points_balance,
-			COALESCE(SUM(wd.weight_kg), 0) AS total_kg
+			COALESCE(SUM(wdi.weight_kg), 0) AS total_kg
 		FROM users u
 		LEFT JOIN waste_deposits wd
 			ON wd.user_id = u.id AND wd.status = 'verified'
+		LEFT JOIN waste_deposit_items wdi
+			ON wdi.waste_deposit_id = wd.id
 		WHERE u.role = 'user'
 		GROUP BY u.id, u.name, u.points_balance
 		ORDER BY u.points_balance DESC
@@ -76,13 +78,15 @@ func (r *leaderboardRepository) GetMonthly(limit int) ([]dto.LeaderboardEntry, e
 			u.id          AS user_id,
 			u.name        AS name,
 			u.points_balance AS points_balance,
-			COALESCE(SUM(wd.weight_kg), 0) AS total_kg
+			COALESCE(SUM(wdi.weight_kg), 0) AS total_kg
 		FROM users u
 		INNER JOIN waste_deposits wd
 			ON wd.user_id = u.id
 			AND wd.status = 'verified'
 			AND MONTH(wd.created_at) = MONTH(NOW())
 			AND YEAR(wd.created_at)  = YEAR(NOW())
+		INNER JOIN waste_deposit_items wdi
+			ON wdi.waste_deposit_id = wd.id
 		WHERE u.role = 'user'
 		GROUP BY u.id, u.name, u.points_balance
 		ORDER BY total_kg DESC
@@ -105,3 +109,4 @@ func (r *leaderboardRepository) GetMonthly(limit int) ([]dto.LeaderboardEntry, e
 	}
 	return entries, nil
 }
+

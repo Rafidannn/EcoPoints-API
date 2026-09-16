@@ -66,7 +66,10 @@ func (r *pointTransactionRepository) GetReportSummary() (*dto.ReportSummaryRespo
 	}
 	summary.TotalDeposits = totalDeposits
 
-	if err := r.db.Table("waste_deposits").Where("status = ?", "verified").Select("COALESCE(SUM(weight_kg), 0)").Scan(&summary.TotalWeightKg).Error; err != nil {
+	if err := r.db.Table("waste_deposit_items wdi").
+		Joins("INNER JOIN waste_deposits wd ON wd.id = wdi.waste_deposit_id").
+		Where("wd.status = ?", "verified").
+		Select("COALESCE(SUM(wdi.weight_kg), 0)").Scan(&summary.TotalWeightKg).Error; err != nil {
 		return nil, err
 	}
 	if err := r.db.Table("point_transactions").Where("type IN (?, ?)", "credit", "earned").Select("COALESCE(SUM(amount), 0)").Scan(&summary.TotalPointsIssued).Error; err != nil {
@@ -77,9 +80,10 @@ func (r *pointTransactionRepository) GetReportSummary() (*dto.ReportSummaryRespo
 	}
 
 	var byWasteType []dto.WasteTypeReportItem
-	if err := r.db.Table("waste_deposits wd").
-		Select("wt.id AS waste_type_id, wt.name AS waste_type_name, COALESCE(SUM(wd.weight_kg),0) AS total_weight_kg, COUNT(wd.id) AS total_deposits, 0 AS total_points").
-		Joins("LEFT JOIN waste_types wt ON wt.id = wd.waste_type_id").
+	if err := r.db.Table("waste_deposit_items wdi").
+		Select("wt.id AS waste_type_id, wt.name AS waste_type_name, COALESCE(SUM(wdi.weight_kg),0) AS total_weight_kg, COUNT(DISTINCT wdi.waste_deposit_id) AS total_deposits, 0 AS total_points").
+		Joins("INNER JOIN waste_deposits wd ON wd.id = wdi.waste_deposit_id").
+		Joins("LEFT JOIN waste_types wt ON wt.id = wdi.waste_type_id").
 		Where("wd.status = ?", "verified").
 		Group("wt.id, wt.name").
 		Scan(&byWasteType).Error; err != nil {
@@ -89,7 +93,8 @@ func (r *pointTransactionRepository) GetReportSummary() (*dto.ReportSummaryRespo
 
 	var byDropPoint []dto.DropPointReportItem
 	if err := r.db.Table("waste_deposits wd").
-		Select("dp.id AS drop_point_id, dp.name AS drop_point_name, COALESCE(SUM(wd.weight_kg),0) AS total_weight_kg, COUNT(wd.id) AS total_deposits").
+		Select("dp.id AS drop_point_id, dp.name AS drop_point_name, COALESCE(SUM(wdi.weight_kg),0) AS total_weight_kg, COUNT(DISTINCT wd.id) AS total_deposits").
+		Joins("INNER JOIN waste_deposit_items wdi ON wdi.waste_deposit_id = wd.id").
 		Joins("LEFT JOIN drop_points dp ON dp.id = wd.drop_point_id").
 		Where("wd.status = ?", "verified").
 		Group("dp.id, dp.name").
@@ -100,6 +105,7 @@ func (r *pointTransactionRepository) GetReportSummary() (*dto.ReportSummaryRespo
 
 	return &summary, nil
 }
+
 
 func (r *pointTransactionRepository) FindByUserID(userID uint64) ([]model.PointTransaction, error) {
 	return r.GetByUserID(userID)
