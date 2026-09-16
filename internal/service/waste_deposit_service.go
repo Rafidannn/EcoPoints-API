@@ -128,7 +128,17 @@ func (s *wasteDepositService) toResponse(d *model.WasteDeposit, earnedPoints *ui
 }
 
 func (s *wasteDepositService) Create(userID uint64, req dto.CreateWasteDepositRequest) (*dto.WasteDepositResponse, error) {
-	if len(req.Items) == 0 {
+	items := req.Items
+	if len(items) == 0 && req.WasteTypeID != nil && req.WeightKg != nil && *req.WeightKg > 0 {
+		items = []dto.WasteDepositItemRequest{
+			{
+				WasteTypeID: *req.WasteTypeID,
+				WeightKg:    *req.WeightKg,
+			},
+		}
+	}
+
+	if len(items) == 0 {
 		return nil, errors.New("minimal harus ada 1 jenis sampah yang disetor")
 	}
 
@@ -141,12 +151,15 @@ func (s *wasteDepositService) Create(userID uint64, req dto.CreateWasteDepositRe
 		Notes:       req.Notes,
 		CreatedAt:   &now,
 		UpdatedAt:   &now,
-		Items:       make([]model.WasteDepositItem, len(req.Items)),
+		Items:       make([]model.WasteDepositItem, len(items)),
 	}
 
-	for i, itemReq := range req.Items {
+	for i, itemReq := range items {
+		if itemReq.WasteTypeID == 0 {
+			return nil, fmt.Errorf("jenis sampah harus dipilih pada item #%d", i+1)
+		}
 		if itemReq.WeightKg <= 0 {
-			return nil, fmt.Errorf("berat sampah harus lebih dari 0 kg")
+			return nil, fmt.Errorf("berat sampah harus lebih dari 0 kg pada item #%d", i+1)
 		}
 
 		wasteType, err := s.wasteTypeRepo.FindByID(itemReq.WasteTypeID)

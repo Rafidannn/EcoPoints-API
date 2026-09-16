@@ -4,13 +4,15 @@ import "time"
 
 // WasteDepositItemRequest represents an individual waste item in deposit request
 type WasteDepositItemRequest struct {
-	WasteTypeID uint64  `json:"waste_type_id" binding:"required"`
-	WeightKg    float64 `json:"weight_kg" binding:"required,gt=0"`
+	WasteTypeID uint64  `json:"waste_type_id"`
+	WeightKg    float64 `json:"weight_kg"`
 }
 
 // CreateWasteDepositRequest represents payload for submitting a new waste deposit with multiple items
 type CreateWasteDepositRequest struct {
-	Items       []WasteDepositItemRequest `json:"items" binding:"required,min=1,dive"`
+	Items       []WasteDepositItemRequest `json:"items"`
+	WasteTypeID *uint64                   `json:"waste_type_id"`
+	WeightKg    *float64                  `json:"weight_kg"`
 	DropPointID *uint64                   `json:"drop_point_id"`
 	Notes       *string                   `json:"notes"`
 	Photo       *string                   `json:"photo"`
@@ -18,14 +20,16 @@ type CreateWasteDepositRequest struct {
 
 // VerifyWasteDepositItemRequest represents verification for an individual item
 type VerifyWasteDepositItemRequest struct {
-	ItemID   uint64   `json:"item_id" binding:"required"`
+	ItemID   uint64   `json:"item_id"`
 	WeightKg *float64 `json:"weight_kg"` // If null or <= 0, uses original submitted weight
 }
 
 // VerifyWasteDepositRequest represents payload for a staff/admin verifying a deposit
 type VerifyWasteDepositRequest struct {
-	Items []VerifyWasteDepositItemRequest `json:"items"` // optional per item weights
-	Notes *string                         `json:"notes"`
+	Items    []VerifyWasteDepositItemRequest `json:"items"` // optional per item weights
+	Status   *string                         `json:"status"`
+	WeightKg *float64                        `json:"weight_kg"` // for single item / legacy
+	Notes    *string                         `json:"notes"`
 }
 
 // WasteDepositItemResponse represents an individual item in deposit response
