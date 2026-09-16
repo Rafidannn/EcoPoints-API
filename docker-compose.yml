@@ -9,5 +9,7 @@ services:
       - "${APP_PORT:-8092}:${APP_PORT:-8092}"
     env_file:
       - .env
+    volumes:
+      - ./serviceAccountKey.json:/app/serviceAccountKey.json
     environment:
       - APP_ENV=production
