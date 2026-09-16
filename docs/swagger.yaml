@@ -20,6 +20,19 @@ definitions:
         example: true
         type: boolean
     type: object
+  dto.ChangePasswordRequest:
+    properties:
+      current_password:
+        example: secret123
+        type: string
+      new_password:
+        example: newsecret123
+        minLength: 8
+        type: string
+    required:
+    - current_password
+    - new_password
+    type: object
   dto.CreateDropPointRequest:
     properties:
       address:
@@ -70,6 +83,22 @@ definitions:
     - name
     - point_cost
     - stock
+    type: object
+  dto.CreateWasteDepositRequest:
+    properties:
+      drop_point_id:
+        type: integer
+      notes:
+        type: string
+      photo:
+        type: string
+      waste_type_id:
+        type: integer
+      weight_kg:
+        type: number
+    required:
+    - waste_type_id
+    - weight_kg
     type: object
   dto.CreateWasteTypeRequest:
     properties:
@@ -122,6 +151,19 @@ definitions:
       updated_at:
         type: string
     type: object
+  dto.LeaderboardEntry:
+    properties:
+      name:
+        type: string
+      points_balance:
+        type: integer
+      rank:
+        type: integer
+      total_kg:
+        type: number
+      user_id:
+        type: integer
+    type: object
   dto.LoginRequest:
     properties:
       email:
@@ -147,6 +189,35 @@ definitions:
         type: string
       user:
         $ref: '#/definitions/dto.UserResponse'
+    type: object
+  dto.RedeemRewardRequest:
+    properties:
+      notes:
+        example: Harap kirim ke nomor GoPay 081234567890
+        type: string
+    type: object
+  dto.RedemptionResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      notes:
+        type: string
+      points_used:
+        type: integer
+      reward_id:
+        type: integer
+      reward_name:
+        type: string
+      status:
+        type: string
+      user_id:
+        type: integer
+      user_name:
+        type: string
+      voucher_code:
+        type: string
     type: object
   dto.RegisterRequest:
     properties:
@@ -275,6 +346,56 @@ definitions:
       updated_at:
         type: string
     type: object
+  dto.VerifyWasteDepositRequest:
+    properties:
+      notes:
+        type: string
+      weight_kg:
+        description: If null, uses original submitted weight
+        type: number
+    type: object
+  dto.WasteDepositResponse:
+    properties:
+      code:
+        type: string
+      created_at:
+        type: string
+      drop_point_id:
+        type: integer
+      drop_point_name:
+        type: string
+      earned_points:
+        type: integer
+      estimated_points:
+        type: integer
+      id:
+        type: integer
+      notes:
+        type: string
+      photo:
+        type: string
+      points_per_kg:
+        type: integer
+      status:
+        description: pending, verified, rejected
+        type: string
+      user_id:
+        type: integer
+      user_name:
+        type: string
+      verified_at:
+        type: string
+      verified_by:
+        type: integer
+      verifier_name:
+        type: string
+      waste_type_id:
+        type: integer
+      waste_type_name:
+        type: string
+      weight_kg:
+        type: number
+    type: object
   dto.WasteTypeResponse:
     properties:
       created_at:
@@ -300,7 +421,6 @@ definitions:
       updated_at:
         type: string
     type: object
-host: ""
 info:
   contact:
     email: support@ecopoints.test
@@ -314,6 +434,42 @@ info:
   title: EcoPoints Golang REST API
   version: "1.0"
 paths:
+  /api/v1/auth/change-password:
+    put:
+      consumes:
+      - application/json
+      description: Change password for the currently authenticated user
+      parameters:
+      - description: Change Password Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ChangePasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Password updated successfully
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+        "400":
+          description: Validation error
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "401":
+          description: Unauthorized or wrong current password
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Change user password
+      tags:
+      - Auth
   /api/v1/auth/login:
     post:
       consumes:
@@ -627,6 +783,40 @@ paths:
       summary: Update an existing drop point
       tags:
       - Drop Points
+  /api/v1/leaderboard:
+    get:
+      description: Returns top users ranked by points (all-time) or by kg deposited
+        (monthly).
+      parameters:
+      - description: 'Period: ''monthly'' or ''all'' (default: all)'
+        in: query
+        name: period
+        type: string
+      - description: 'Number of entries to return (default: 10, max: 50)'
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.APIResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/dto.LeaderboardEntry'
+                  type: array
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+      summary: Get leaderboard
+      tags:
+      - Leaderboard
   /api/v1/rewards:
     get:
       description: Retrieve list of all redeemable rewards
@@ -824,6 +1014,461 @@ paths:
       summary: Update an existing reward
       tags:
       - Rewards
+  /api/v1/rewards/{id}/redeem:
+    post:
+      description: User redeems a reward using their points
+      parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Reward ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Optional notes
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/dto.RedeemRewardRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Redeemed successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.RedemptionResponse'
+              type: object
+        "400":
+          description: Invalid ID or insufficient points
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "404":
+          description: Reward not found
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Redeem a reward
+      tags:
+      - Rewards
+  /api/v1/rewards/my-redemptions:
+    get:
+      description: Get list of reward redemptions for the logged-in user
+      parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.APIResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/dto.RedemptionResponse'
+                  type: array
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get my reward redemptions
+      tags:
+      - Rewards
+  /api/v1/rewards/redemptions:
+    get:
+      description: Get list of all reward redemptions (Admin/Petugas only)
+      parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.APIResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/dto.RedemptionResponse'
+                  type: array
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get all reward redemptions
+      tags:
+      - Rewards
+  /api/v1/rewards/redemptions/{id}/reject:
+    put:
+      description: Reject a pending redemption and restore the user's points and reward
+        stock (Admin/Petugas only)
+      parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Redemption ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Rejection reason
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/dto.RedeemRewardRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.RedemptionResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Reject a reward redemption
+      tags:
+      - Rewards
+  /api/v1/rewards/redemptions/{id}/verify:
+    put:
+      description: Mark a pending redemption as completed and issue its voucher code
+        (Admin/Petugas only)
+      parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Redemption ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Optional notes
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/dto.RedeemRewardRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.RedemptionResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Complete a reward redemption
+      tags:
+      - Rewards
+  /api/v1/waste-deposits:
+    get:
+      description: Returns waste deposits. Normal users see only their deposits. Admin/Petugas
+        see all.
+      parameters:
+      - description: 'Filter status: pending, verified'
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.APIResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/dto.WasteDepositResponse'
+                  type: array
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List waste deposits
+      tags:
+      - Waste Deposits
+    post:
+      consumes:
+      - application/json
+      description: Creates a new pending waste deposit request
+      parameters:
+      - description: Waste Deposit Data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateWasteDepositRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.WasteDepositResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Submit a new waste deposit
+      tags:
+      - Waste Deposits
+  /api/v1/waste-deposits/{id}:
+    get:
+      parameters:
+      - description: Waste Deposit ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.WasteDepositResponse'
+              type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get waste deposit details
+      tags:
+      - Waste Deposits
+  /api/v1/waste-deposits/{id}/cancel:
+    put:
+      consumes:
+      - application/json
+      description: Cancels a pending deposit by its owner. No points are involved.
+      parameters:
+      - description: Waste Deposit ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Cancellation notes
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/dto.VerifyWasteDepositRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.WasteDepositResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Cancel waste deposit (owner only)
+      tags:
+      - Waste Deposits
+  /api/v1/waste-deposits/{id}/reject:
+    put:
+      consumes:
+      - application/json
+      description: Rejects a pending deposit without awarding points
+      parameters:
+      - description: Waste Deposit ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Rejection notes
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/dto.VerifyWasteDepositRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.WasteDepositResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Reject waste deposit (Staff/Admin only)
+      tags:
+      - Waste Deposits
+  /api/v1/waste-deposits/{id}/verify:
+    put:
+      consumes:
+      - application/json
+      description: Confirms deposit, assigns actual weight, calculates and awards
+        points to user
+      parameters:
+      - description: Waste Deposit ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Verification Data
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/dto.VerifyWasteDepositRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.WasteDepositResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.APIErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Verify waste deposit (Staff/Admin only)
+      tags:
+      - Waste Deposits
   /api/v1/waste-types:
     get:
       description: Retrieve list of all waste types from database
