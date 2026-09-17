@@ -161,6 +161,9 @@ func (s *wasteDepositService) Create(userID uint64, req dto.CreateWasteDepositRe
 		if itemReq.WeightKg <= 0 {
 			return nil, fmt.Errorf("berat sampah harus lebih dari 0 kg pada item #%d", i+1)
 		}
+		if itemReq.WeightKg > 100 {
+			return nil, fmt.Errorf("berat sampah maksimal 100 kg pada item #%d", i+1)
+		}
 
 		wasteType, err := s.wasteTypeRepo.FindByID(itemReq.WasteTypeID)
 		if err != nil {
@@ -221,7 +224,13 @@ func (s *wasteDepositService) GetAll(status string) ([]dto.WasteDepositResponse,
 func (s *wasteDepositService) Verify(depositID uint64, verifierID uint64, req dto.VerifyWasteDepositRequest) (*dto.WasteDepositResponse, error) {
 	itemWeights := make(map[uint64]float64)
 	for _, item := range req.Items {
-		if item.WeightKg != nil && *item.WeightKg > 0 {
+		if item.WeightKg != nil {
+			if *item.WeightKg <= 0 {
+				return nil, errors.New("berat aktual sampah harus lebih dari 0 kg")
+			}
+			if *item.WeightKg > 100 {
+				return nil, errors.New("berat aktual sampah maksimal 100 kg")
+			}
 			itemWeights[item.ItemID] = *item.WeightKg
 		}
 	}
