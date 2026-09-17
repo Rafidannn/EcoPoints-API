@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 
 	"ecopoints-go-api/internal/config"
 	"ecopoints-go-api/internal/dto"
@@ -125,11 +127,27 @@ func main() {
 
 	// Swagger documentation route
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-	router.Static("/uploads", "uploads")
+	// Ensure uploads directory exists and setup static route
+	uploadsDir := "uploads"
+	if _, err := os.Stat(uploadsDir); os.IsNotExist(err) {
+		if execPath, err := os.Executable(); err == nil {
+			execDir := filepath.Dir(execPath)
+			candidate := filepath.Join(execDir, "uploads")
+			if _, err := os.Stat(candidate); err == nil {
+				uploadsDir = candidate
+			}
+		}
+	}
+	_ = os.MkdirAll(filepath.Join(uploadsDir, "rewards"), 0755)
+
+	router.Static("/uploads", uploadsDir)
+	router.Static("/rewards", filepath.Join(uploadsDir, "rewards"))
 
 	// API v1 Routes
 	v1 := router.Group("/api/v1")
 	{
+		v1.Static("/uploads", uploadsDir)
+		v1.Static("/rewards", filepath.Join(uploadsDir, "rewards"))
 		// 1. Auth Routes
 		authGroup := v1.Group("/auth")
 		{

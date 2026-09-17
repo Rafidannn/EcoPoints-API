@@ -10,6 +10,7 @@ services:
     env_file:
       - .env
     volumes:
+      - ./uploads:/app/uploads
       - ./serviceAccountKey.json:/app/serviceAccountKey.json
     environment:
       - APP_ENV=production

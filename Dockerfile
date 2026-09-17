@@ -21,7 +21,10 @@ FROM alpine:latest
 RUN apk --no-cache add ca-certificates tzdata
 WORKDIR /app
 
+RUN mkdir -p /app/uploads/rewards
+
 COPY --from=builder /app/ecopoints-api .
+COPY --from=builder /app/uploads /app/uploads
 
 EXPOSE 8092
 
