@@ -141,13 +141,11 @@ func main() {
 	_ = os.MkdirAll(filepath.Join(uploadsDir, "rewards"), 0755)
 
 	router.Static("/uploads", uploadsDir)
-	router.Static("/rewards", filepath.Join(uploadsDir, "rewards"))
 
 	// API v1 Routes
 	v1 := router.Group("/api/v1")
 	{
 		v1.Static("/uploads", uploadsDir)
-		v1.Static("/rewards", filepath.Join(uploadsDir, "rewards"))
 		// 1. Auth Routes
 		authGroup := v1.Group("/auth")
 		{
