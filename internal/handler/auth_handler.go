@@ -165,6 +165,85 @@ func (h *AuthHandler) Me(c *gin.Context) {
 	))
 }
 
+// UpdateProfile godoc
+// @Summary Update current user profile
+// @Description Update name, whatsapp phone, address for authenticated user
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body dto.UpdateProfileRequest true "Update Profile Request"
+// @Success 200 {object} dto.APIResponse{data=dto.UserResponse} "User profile updated"
+// @Failure 400 {object} dto.APIErrorResponse "Validation error"
+// @Failure 401 {object} dto.APIErrorResponse "Unauthorized"
+// @Failure 409 {object} dto.APIErrorResponse "Email already exists"
+// @Failure 500 {object} dto.APIErrorResponse "Internal server error"
+// @Router /api/v1/auth/profile [put]
+func (h *AuthHandler) UpdateProfile(c *gin.Context) {
+	userIDVal, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse(
+			"Unauthorized",
+			gin.H{"auth": "User ID not found in token"},
+		))
+		return
+	}
+
+	var userID uint64
+	switch v := userIDVal.(type) {
+	case uint64:
+		userID = v
+	case float64:
+		userID = uint64(v)
+	case int:
+		userID = uint64(v)
+	default:
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(
+			"Internal server error",
+			gin.H{"auth": "Invalid user ID type"},
+		))
+		return
+	}
+
+	var req dto.UpdateProfileRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse(
+			"Validation failed",
+			formatValidationError(err),
+		))
+		return
+	}
+
+	userResponse, err := h.authService.UpdateProfile(userID, &req)
+	if err != nil {
+		if errors.Is(err, service.ErrEmailAlreadyExists) {
+			c.JSON(http.StatusConflict, dto.ErrorResponse(
+				err.Error(),
+				gin.H{"email": "Email is already in use"},
+			))
+			return
+		}
+		if errors.Is(err, service.ErrUserNotFound) {
+			c.JSON(http.StatusNotFound, dto.ErrorResponse(
+				err.Error(),
+				gin.H{"user": "User record not found"},
+			))
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(
+			"Gagal memperbarui profil",
+			gin.H{"error": err.Error()},
+		))
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponse(
+		"Profil berhasil diperbarui",
+		userResponse,
+	))
+}
+
 // ChangePassword godoc
 // @Summary Change user password
 // @Description Change password for the currently authenticated user

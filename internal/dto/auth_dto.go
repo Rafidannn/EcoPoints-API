@@ -38,6 +38,13 @@ type ChangePasswordRequest struct {
 	NewPassword     string `json:"new_password" binding:"required,min=8" example:"newsecret123"`
 }
 
+type UpdateProfileRequest struct {
+	Name          string  `json:"name" binding:"required,min=2,max=255" example:"John Doe"`
+	Email         *string `json:"email" example:"johndoe@example.com"`
+	WhatsappPhone *string `json:"whatsapp_phone" example:"081234567890"`
+	Address       *string `json:"address" example:"Jl. Sudirman No. 123"`
+}
+
 type AdminCreateUserRequest struct {
 	Name           string  `json:"name" binding:"required,min=2,max=255"`
 	Email          string  `json:"email" binding:"required,email,max=255"`

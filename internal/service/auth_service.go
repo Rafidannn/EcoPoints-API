@@ -22,6 +22,7 @@ type AuthService interface {
 	Register(req *dto.RegisterRequest) (*dto.UserResponse, error)
 	Login(req *dto.LoginRequest) (*dto.LoginResponse, error)
 	GetProfile(userID uint64) (*dto.UserResponse, error)
+	UpdateProfile(userID uint64, req *dto.UpdateProfileRequest) (*dto.UserResponse, error)
 	ChangePassword(userID uint64, req *dto.ChangePasswordRequest) error
 }
 
@@ -130,6 +131,55 @@ func (s *authService) GetProfile(userID uint64) (*dto.UserResponse, error) {
 	}
 	if user == nil {
 		return nil, ErrUserNotFound
+	}
+
+	return &dto.UserResponse{
+		ID:             user.ID,
+		Name:           user.Name,
+		Email:          user.Email,
+		Role:           user.Role,
+		PointsBalance:  user.PointsBalance,
+		AssignmentArea: user.AssignmentArea,
+		Address:        user.Address,
+		WhatsappPhone:  user.WhatsappPhone,
+		CreatedAt:      user.CreatedAt,
+		UpdatedAt:      user.UpdatedAt,
+	}, nil
+}
+
+func (s *authService) UpdateProfile(userID uint64, req *dto.UpdateProfileRequest) (*dto.UserResponse, error) {
+	user, err := s.userRepo.FindByID(userID)
+	if err != nil {
+		return nil, err
+	}
+	if user == nil {
+		return nil, ErrUserNotFound
+	}
+
+	if req.Email != nil && *req.Email != "" && *req.Email != user.Email {
+		exists, err := s.userRepo.IsEmailExists(*req.Email)
+		if err != nil {
+			return nil, err
+		}
+		if exists {
+			return nil, ErrEmailAlreadyExists
+		}
+		user.Email = *req.Email
+	}
+
+	user.Name = req.Name
+	if req.WhatsappPhone != nil {
+		user.WhatsappPhone = req.WhatsappPhone
+	}
+	if req.Address != nil {
+		user.Address = req.Address
+	}
+
+	now := time.Now()
+	user.UpdatedAt = &now
+
+	if err := s.userRepo.Update(user); err != nil {
+		return nil, err
 	}
 
 	return &dto.UserResponse{

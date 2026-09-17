@@ -136,6 +136,8 @@ func main() {
 			authGroup.POST("/register", authHandler.Register)
 			authGroup.POST("/login", authHandler.Login)
 			authGroup.GET("/me", middleware.AuthMiddleware(jwtService), authHandler.Me)
+			authGroup.PUT("/profile", middleware.AuthMiddleware(jwtService), authHandler.UpdateProfile)
+			authGroup.PUT("/me", middleware.AuthMiddleware(jwtService), authHandler.UpdateProfile)
 			authGroup.PUT("/change-password", middleware.AuthMiddleware(jwtService), authHandler.ChangePassword)
 		}
 
