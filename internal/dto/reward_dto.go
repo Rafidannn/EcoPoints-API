@@ -27,16 +27,19 @@ type RedeemRewardRequest struct {
 }
 
 type RedemptionResponse struct {
-	ID          uint64     `json:"id"`
-	UserID      uint64     `json:"user_id"`
-	UserName    string     `json:"user_name"`
-	RewardID    uint64     `json:"reward_id"`
-	RewardName  string     `json:"reward_name"`
-	PointsUsed  uint       `json:"points_used"`
-	Status      string     `json:"status"`
-	Notes       *string    `json:"notes,omitempty"`
-	VoucherCode *string    `json:"voucher_code,omitempty"`
-	CreatedAt   *time.Time `json:"created_at"`
+	ID          uint64          `json:"id"`
+	UserID      uint64          `json:"user_id"`
+	UserName    string          `json:"user_name"`
+	UserEmail   string          `json:"user_email,omitempty"`
+	RewardID    uint64          `json:"reward_id"`
+	RewardName  string          `json:"reward_name"`
+	PointsUsed  uint            `json:"points_used"`
+	Status      string          `json:"status"`
+	Notes       *string         `json:"notes,omitempty"`
+	VoucherCode *string         `json:"voucher_code,omitempty"`
+	CreatedAt   *time.Time      `json:"created_at"`
+	User        *UserResponse   `json:"user,omitempty"`
+	Reward      *RewardResponse `json:"reward,omitempty"`
 }
 
 type RewardResponse struct {

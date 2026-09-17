@@ -181,35 +181,43 @@ func (s *rewardService) RedeemReward(userID uint64, rewardID uint64, notes *stri
 		return nil, err
 	}
 
-	rewardName := reward.Name
-	res := &dto.RedemptionResponse{
-		ID:          redemption.ID,
-		UserID:      redemption.UserID,
-		UserName:    "",
-		RewardID:    redemption.RewardID,
-		RewardName:  rewardName,
-		PointsUsed:  redemption.PointsUsed,
-		Status:      redemption.Status,
-		Notes:       redemption.Notes,
-		VoucherCode: redemption.VoucherCode,
-		CreatedAt:   redemption.CreatedAt,
-	}
-	return res, nil
+	redemption.Reward = reward
+	res := toRedemptionResponse(redemption)
+	return &res, nil
 }
 
 func toRedemptionResponse(r *model.RewardRedemption) dto.RedemptionResponse {
 	rewardName := ""
+	var rewRes *dto.RewardResponse
 	if r.Reward != nil {
 		rewardName = r.Reward.Name
+		res := toRewardResponse(r.Reward)
+		rewRes = &res
 	}
 	userName := ""
+	userEmail := ""
+	var userRes *dto.UserResponse
 	if r.User != nil {
 		userName = r.User.Name
+		userEmail = r.User.Email
+		userRes = &dto.UserResponse{
+			ID:             r.User.ID,
+			Name:           r.User.Name,
+			Email:          r.User.Email,
+			Role:           r.User.Role,
+			AssignmentArea: r.User.AssignmentArea,
+			Address:        r.User.Address,
+			WhatsappPhone:  r.User.WhatsappPhone,
+			PointsBalance:  r.User.PointsBalance,
+			CreatedAt:      r.User.CreatedAt,
+			UpdatedAt:      r.User.UpdatedAt,
+		}
 	}
 	return dto.RedemptionResponse{
 		ID:          r.ID,
 		UserID:      r.UserID,
 		UserName:    userName,
+		UserEmail:   userEmail,
 		RewardID:    r.RewardID,
 		RewardName:  rewardName,
 		PointsUsed:  r.PointsUsed,
@@ -217,6 +225,8 @@ func toRedemptionResponse(r *model.RewardRedemption) dto.RedemptionResponse {
 		Notes:       r.Notes,
 		VoucherCode: r.VoucherCode,
 		CreatedAt:   r.CreatedAt,
+		User:        userRes,
+		Reward:      rewRes,
 	}
 }
 
