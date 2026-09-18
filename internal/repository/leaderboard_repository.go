@@ -42,7 +42,7 @@ func (r *leaderboardRepository) GetAllTime(limit int) ([]dto.LeaderboardEntry, e
 			ON wdi.waste_deposit_id = wd.id
 		WHERE u.role = 'user'
 		GROUP BY u.id, u.name, u.points_balance
-		ORDER BY u.points_balance DESC
+		ORDER BY total_kg DESC, u.points_balance DESC
 		LIMIT ?
 	`, limit).Scan(&rows).Error
 
